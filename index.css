@@ -1,0 +1,188 @@
+body {
+    -webkit-user-select: none;
+    user-select: none;
+
+    background: #121215;
+    margin: 0;
+
+    font: normal 16px/1.5 "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
+    &>div#types {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+
+        position: fixed;
+        top: 1vmin;
+        left: 1vmin;
+        width: calc(calc(100vw - 95vmin) / 2 - 2vmin);
+
+        &>div.button.option {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            width: 100%;
+            height: 100%;
+            margin: 1vmin;
+            padding: 1vmin;
+
+            background-color: #232326;
+            border-radius: 1vmin;
+            color: white;
+            font-size: 2vmin;
+            font-weight: bold;
+            text-align: center;
+
+            cursor: pointer;
+            transition-duration: 0.2s;
+            transition-timing-function: ease-in-out;
+
+            &:hover { background-color: #343436; }
+            &:active { background-color: #454546; }
+
+            &.selected {
+                background-color: #336;
+
+                &:hover { background-color: #446; }
+                &:active { background-color: #556; }
+            }
+        }
+    }
+
+    &>input[type="text"]#argument0 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        position: fixed;
+        top: 8vmin;
+        left: 1vmin;
+        width: calc(calc(100vw - 95vmin) / 10 - 4vmin);
+
+        height: 5vmin;
+        margin: 1vmin;
+        padding: 1vmin;
+
+        background-color: #232326;
+        border-radius: 1vmin;
+        border: none;
+        color: white;
+        font-size: 2vmin;
+        font-weight: bold;
+        text-align: center;
+
+        cursor: text;
+
+        transition-duration: 0.2s;
+        &:focus {
+            outline: none;
+            background-color: #343436;
+        }
+    }
+    &>input[type="text"]#argument1 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        position: fixed;
+        top: 8vmin;
+        left: calc(calc(100vw - 95vmin) / 10 + 1vmin);
+        width: calc(calc(100vw - 95vmin) * 2 / 10 - 5vmin);
+
+        height: 5vmin;
+        margin: 1vmin;
+        padding: 1vmin;
+
+        background-color: #232326;
+        border-radius: 1vmin;
+        border: none;
+        color: white;
+        font-size: 2vmin;
+        font-weight: bold;
+        text-align: center;
+
+        cursor: text;
+
+        transition-duration: 0.2s;
+        &:focus {
+            outline: none;
+            background-color: #343436;
+        }
+    }
+    &>input[type="text"]#argument2 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        position: fixed;
+        top: 8vmin;
+        left: calc(calc(100vw - 95vmin) * 3 / 10);
+        width: calc(calc(100vw - 95vmin) * 2 / 10 - 5vmin);
+
+        height: 5vmin;
+        margin: 1vmin;
+        padding: 1vmin;
+
+        background-color: #232326;
+        border-radius: 1vmin;
+        border: none;
+        color: white;
+        font-size: 2vmin;
+        font-weight: bold;
+        text-align: center;
+
+        cursor: text;
+
+        transition-duration: 0.2s;
+        &:focus {
+            outline: none;
+            background-color: #343436;
+        }
+    }
+
+    &>div.button#regenerate {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        position: fixed;
+        top: 17vmin;
+        left: 1vmin;
+        width: calc(calc(100vw - 95vmin) / 2 - 6vmin);
+
+        height: 5vmin;
+        margin: 1vmin;
+        padding: 1vmin;
+
+        background-color: #232326;
+        border-radius: 1vmin;
+        border: none;
+        color: white;
+        font-size: 2vmin;
+        font-weight: bold;
+
+        cursor: pointer;
+        transition-duration: 0.2s;
+        transition-timing-function: ease-in-out;
+
+        &:hover { background-color: #343436; }
+        &:active { background-color: #454546; }
+
+        &.selected {
+            background-color: #336;
+
+            &:hover { background-color: #446; }
+            &:active { background-color: #556; }
+        }
+    }
+
+    &>canvas#paper {
+        position: fixed;
+        top: calc(50% - calc(95vmin / 2));
+        left: calc(50% - calc(95vmin / 2));
+        width: 95vmin;
+        height: 95vmin;
+    }
+}

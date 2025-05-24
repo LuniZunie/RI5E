@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Map Generator</title>
+        <link rel='stylesheet' href='../css/map-gen.css'>
+        <script type='module' src='../js/map-gen.js'></script>
+        <script type='module' src='../../src/js/dimension_map.js'></script>
+    </head>
+    <body>
+        <div id='main'>
+            <canvas id='map'></canvas>
+        </div>
+        <div id='sidebar'>
+            <div id='dimension'>
+                <input type='number' placeholder='25' id='width' min='1' max='1000'>
+                <span>X</span>
+                <input type='number' placeholder='25' id='height' min='1' max='1000'>
+                <div id='resize' class='button'>Resize</div>
+            </div>
+            <div id='colors'>
+                <div class='template option'>
+                    <span class='color'></span>
+                    <span class='label'>TEMP BIOME</span>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

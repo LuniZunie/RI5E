@@ -1,0 +1,182 @@
+body {
+    --main-size: min(96vh, 50vw);
+    --aspect-ratio: 32/32;
+    --width: 100%;
+    --height: auto;
+
+    -webkit-user-select: none;
+    user-select: none;
+
+    background: #222;
+    margin: 0;
+
+    font: normal 16px/1.5 "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
+    &>div#main {
+        position: fixed;
+
+        height: var(--main-size);
+        width: var(--main-size);
+        top: calc(50vh - var(--main-size) / 2);
+        left: 2vh;
+
+        &>canvas#map {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+
+            aspect-ratio: var(--aspect-ratio);
+
+            max-width: 100%;
+            max-height: 100%;
+            width: var(--width);
+            height: var(--height);
+
+            background: #121215;
+        }
+    }
+
+    &>div#sidebar {
+        position: fixed;
+
+        top: 0;
+        left: calc(var(--main-size) + 4vh);
+        width: calc(100vw - var(--main-size) - 6vh);
+        height: 100vh;
+
+        background: #121215;
+        color: white;
+
+        &>div#dimension {
+            /* number of rows and columns (1 number input with label should be centered)*/
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+
+            position: absolute;
+            top: 1vh;
+            left: 2vh;
+            width: calc(100% - 4vh);
+            height: 10vh;
+
+            &>input[type="number"] {
+                width: 4em;
+                height: 4vh;
+                font-size: 2vh;
+                text-align: center;
+                color: white;
+                border: none;
+
+                margin: 1ex;
+
+                border-radius: 1vh;
+                background-color: #232326;
+
+                &::-webkit-outer-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                &::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+
+                &:focus {
+                    outline: none;
+                    background-color: #343436;
+                }
+            }
+
+            &>div.button#resize {
+                /* button to resize the map */
+                display: flex;
+                justify-content: center;
+                align-items: center;
+
+                width: 6em;
+                height: 4vh;
+
+                margin: 1ex;
+
+                background-color: #232326;
+                border-radius: 1vh;
+                border: none;
+
+                color: white;
+                font-size: 2vh;
+
+                cursor: pointer;
+
+                transition-duration: 0.2s;
+                &:hover { background-color: #343436; }
+                &:active { background-color: #444; }
+            }
+        }
+
+        &>div#colors {
+            /* color picker for the map */
+            display: flex;
+            justify-content: flex-start;
+            align-content: flex-start;
+            align-items: flex-start;
+            flex-wrap: wrap;
+
+            overflow: auto;
+            &::-webkit-scrollbar {
+                width: 0.5em;
+            }
+            &::-webkit-scrollbar-thumb {
+                background-color: #444;
+                border-radius: 1vh;
+            }
+
+            position: absolute;
+            top: 12vh;
+            left: 2vh;
+            width: calc(100% - 4vh);
+            height: calc(100% - 14vh);
+
+            &>div.option {
+                /* each color option */
+                cursor: pointer;
+                width: calc(50% - 4vmin);
+
+                padding: 1vmin;
+                margin: 1vmin;
+
+                border-radius: 1vh;
+                background-color: #161618;
+
+                transition: background-color 0.2s ease-in-out;
+
+                &:hover { background-color: #222; }
+                &:active { background-color: #333; }
+                &.selected { background-color: #336; }
+
+                &>span.color { /* div with color */
+                    float: left;
+
+                    display: block;
+                    aspect-ratio: 1 / 1;
+                    width: 3vh;
+                    margin: 0.5vh;
+
+                    background-color: var(--color, #f0f);
+                    border-radius: 1vh;
+                    cursor: pointer;
+                }
+
+                &>span.label { /* label for the color */
+                    display: inline-block;
+                    font-size: 2vh;
+                    color: white;
+                    margin: 0.5vh;
+                }
+
+                &.template { display: none; }
+            }
+        }
+    }
+}

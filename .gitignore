@@ -1,0 +1,5 @@
+.vscode
+.hidden
+
+node_modules
+dist
