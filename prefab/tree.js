@@ -1,3 +1,4 @@
+import linker from "./linker.js";
 import Prefab from "./prefab.js";
 import Item from '../item.js';
 import Drop from '../drop.js';
@@ -16,6 +17,7 @@ export default class Tree extends Prefab {
     static seed = class extends Item {};
     static drop = class extends Drop {};
 };
+linker.link(Tree);
 
 class BuckeyeTree extends Tree {
     static id = "tree:buckeye_tree";
@@ -371,3 +373,16 @@ class RedwoodTree extends Tree {
 };
 
 export { BuckeyeTree, BirchTree, CottonwoodTree, PineTree, SycamoreTree, SpruceTree, MapleTree, ElmTree, OakTree, CedarTree, RedwoodTree };
+linker.go(Tree).link(
+    BuckeyeTree,
+    BirchTree,
+    CottonwoodTree,
+    PineTree,
+    SycamoreTree,
+    SpruceTree,
+    MapleTree,
+    ElmTree,
+    OakTree,
+    CedarTree,
+    RedwoodTree
+);

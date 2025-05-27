@@ -1,3 +1,4 @@
+import linker from "./linker.js";
 import Item from "./item.js";
 import Drop from "./drop.js";
 import Text from "../module/text.js";
@@ -10,6 +11,7 @@ export default class Forageable extends Item {
 
     static drop = class extends Drop {};
 };
+linker.go(Item).link(Forageable);
 
 class Grass extends Forageable {
     static id = "forageable:grass_patch";
@@ -391,3 +393,23 @@ class Coconut extends Forageable {
 };
 
 export { Grass, Clover, Dandelion, Mushroom, Blackberry, Raspberry, Blueberry, Grape, Strawberry, Banana, Apple, Orange, Peach, Lemon, Lime, Cherry, Pineapple, Coconut };
+linker.go(Item).go(Forageable).link(
+    Grass,
+    Clover,
+    Dandelion,
+    Mushroom,
+    Blackberry,
+    Raspberry,
+    Blueberry,
+    Grape,
+    Strawberry,
+    Banana,
+    Apple,
+    Orange,
+    Peach,
+    Lemon,
+    Lime,
+    Cherry,
+    Pineapple,
+    Coconut
+);

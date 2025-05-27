@@ -3,6 +3,7 @@ import Prefab from "./prefab.js";
 import Text from "../module/text.js";
 import Climate from "../module/climate.js";
 import { Grass, Clover, Dandelion, Mushroom, Blackberry, Raspberry, Blueberry, Grape, Strawberry, Banana, Apple, Orange, Peach, Lemon, Lime, Cherry, Pineapple, Coconut } from "./forageable.js";
+import linker from "./linker.js";
 
 export default class Biome extends Prefab {
     static sprite = "";
@@ -16,8 +17,9 @@ export default class Biome extends Prefab {
     distance;
     locked = true;
 };
+linker.link(Biome);
 
-export class TemperateGrassland extends Biome {
+class TemperateGrassland extends Biome {
     static id = "biome:temperate_grassland";
     static name = new Text("temperate grassland");
     static description = new Text("a wide, open area with grass and few trees");
@@ -32,7 +34,7 @@ export class TemperateGrassland extends Biome {
 
     static forageables = [ Grass, Clover, Dandelion, Blackberry, Grape, Strawberry, Apple, Cherry ];
 };
-export class TropicalGrassland extends Biome {
+class TropicalGrassland extends Biome {
     static id = "biome:tropical_grassland";
     static name = new Text("tropical grassland");
     static description = new Text("a warm, open area with tall grass and scattered trees");
@@ -48,7 +50,7 @@ export class TropicalGrassland extends Biome {
     static forageables = [ Grass, Banana, Orange, Lemon, Lime, Pineapple, Coconut ];
 };
 
-export class Shrubland extends Biome {
+class Shrubland extends Biome {
     static id = "biome:shrubland";
     static name = new Text("shrubland");
     static description = new Text("a dry, open area with scattered shrubs");
@@ -63,7 +65,7 @@ export class Shrubland extends Biome {
 
     static forageables = [ Grass, Clover, Dandelion, Mushroom, Blackberry, Raspberry, Grape, Strawberry, Apple, Peach, Cherry ];
 };
-export class Scrubland extends Biome {
+class Scrubland extends Biome {
     static id = "biome:scrubland";
     static name = new Text("scrubland");
     static description = new Text("a dry, open area with low shrubs and grasses");
@@ -79,7 +81,7 @@ export class Scrubland extends Biome {
     static forageables = [ Grass, Blackberry, Grape, Orange, Lemon, Lime ];
 };
 
-export class TemperateForest extends Biome {
+class TemperateForest extends Biome {
     static id = "biome:temperate_forest";
     static name = new Text("temperate forest");
     static description = new Text("a dense, wooded area with a variety of plants");
@@ -94,7 +96,7 @@ export class TemperateForest extends Biome {
 
     static forageables = [ Grass, Clover, Dandelion, Mushroom, Blackberry, Raspberry, Blueberry, Grape, Strawberry, Apple, Peach, Cherry ];
 };
-export class MontaneForest extends Biome {
+class MontaneForest extends Biome {
     static id = "biome:montane_forest";
     static name = new Text("montane forest");
     static description = new Text("a forest located in mountainous regions with diverse flora");
@@ -109,7 +111,7 @@ export class MontaneForest extends Biome {
 
     static forageables = [ Grass, Clover, Dandelion, Mushroom, Blackberry, Raspberry, Blueberry, Grape, Strawberry, Apple, Orange, Peach, Lemon, Lime, Cherry ];
 };
-export class SubtropicalForest extends Biome {
+class SubtropicalForest extends Biome {
     static id = "biome:subtropical_forest";
     static name = new Text("subtropical forest");
     static description = new Text("a warm, humid forest with lush vegetation");
@@ -124,7 +126,7 @@ export class SubtropicalForest extends Biome {
 
     static forageables = [ Grass, Mushroom, Blackberry, Raspberry, Blueberry, Grape, Strawberry, Banana, Apple, Orange, Peach, Lemon, Lime, Cherry, Pineapple, Coconut ];
 };
-export class MangroveForest extends Biome {
+class MangroveForest extends Biome {
     static id = "biome:mangrove_forest";
     static name = new Text("mangrove forest");
     static description = new Text("a coastal forest with salt-tolerant trees");
@@ -140,7 +142,7 @@ export class MangroveForest extends Biome {
     static forageables = [ Pineapple, Coconut ];
 };
 
-export class TropicalRainforest extends Biome {
+class TropicalRainforest extends Biome {
     static id = "biome:tropical_rainforest";
     static name = new Text("tropical rainforest");
     static description = new Text("a dense, humid forest with a high diversity of plants and animals");
@@ -157,7 +159,7 @@ export class TropicalRainforest extends Biome {
     static forageables = [ Grass, Mushroom, Grape, Banana, Orange, Lemon, Lime, Pineapple, Coconut ];
 };
 
-export class Water extends Biome {
+class Water extends Biome {
     static id = "biome:water";
     static name = new Text("water");
     static description = new Text("a body of water, such as a river, lake, or ocean");
@@ -173,3 +175,19 @@ export class Water extends Biome {
     static forageables = [];
     static fishable = true;
 };
+
+linker.go(Biome)
+    .link(
+        TemperateGrassland,
+        TropicalGrassland,
+        Shrubland,
+        Scrubland,
+        TemperateForest,
+        MontaneForest,
+        SubtropicalForest,
+        MangroveForest,
+        TropicalRainforest,
+        Water
+    );
+export {
+    TemperateGrassland, TropicalGrassland, Shrubland, Scrubland, TemperateForest, MontaneForest, SubtropicalForest, MangroveForest, TropicalRainforest, Water };
