@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/css/game/ui.css" />
+    <link rel="stylesheet" href="/css/game/top-bar.css" />
+    <link rel="stylesheet" href="/css/game/game.css" />
+    <link rel="stylesheet" href="/css/game/main.css" />
+    <link rel="stylesheet" href="/css/game/page-explore.css" />
+    <link rel="stylesheet" href="/css/global/display-clock.css" />
+    <title>RI5E</title>
+    <script type="module">
+        import "/module/html.js";
+
+        import Game from "/game/game.js";
+        import Time from "/game/time.js";
+        import User from "/game/user.js";
+        import { Pages } from "/game/function/page.js";
+
+        function hashchange(e, game) {
+            switch (window.location.hash) {
+                case "#profile": {
+                    const iframe = document.qs("div.float>iframe");
+                    iframe.src = "/profile";
+                    iframe.onload = () => {
+                        if (iframe.contentWindow.location.pathname !== "/profile")
+                            window.location.reload();
+                    };
+
+                    iframe.parentElement.classList.remove("hidden");
+                } break;
+                default: {
+                    game.hash(window.location.hash);
+                } break;
+            }
+        }
+
+        window.addEventListener("load", () => {
+            fetch("/api/user", { credentials: "include" })
+                .then(res => {
+                    if (res.ok) return res.json();
+                    window.location.href = "/login?error=not_logged_in";
+                })
+                .then(data => {
+                    const game = new Game({
+                        user: new User(data),
+                        container: document.qs("div#game"),
+                    });
+
+                    game.init().then(() => {
+                        hashchange({}, game);
+                        window.addEventListener("hashchange", e => hashchange(e, game));
+                        document.qsa("div#game>div.top-bar>div.tabs>span.tab").forEach(tab => {
+                            tab.addEventListener("click", e => game.view(Pages[e.target.dataset.page]));
+                        });
+
+                        document.body.addEventListener("keydown", e => {
+                            switch (e.key) {
+                                case "Enter":
+                                    document.querySelectorAll("*.enter-focus:not(.disabled)").forEach(el => {
+                                        if (getComputedStyle(el).display !== "none") {
+                                            el.classList.remove("enter-focus");
+                                            el.click();
+                                        }
+                                    });
+                                    break;
+                            }
+                        });
+
+                        function update() {
+                            game.update();
+                        }
+                        setInterval(update, 1000 / Game.TPS);
+                    });
+                });
+        });
+    </script>
+</head>
+<body>
+    <div id="game">
+        <div class="top-bar">
+            <div class="title">
+                <span>RI5E</span>
+                <span class="date">
+                    <span class="season"></span><span> – </span><span class="month"></span><span>. </span>
+                    <span class="day"></span>
+                </span>
+            </div>
+            <div class="tabs">
+                <span class="tab" data-page="home">home</span>
+                <span class="tab" data-page="explore">explore</span>
+                <span class="tab" data-page="farm">farm</span>
+                <span class="tab" data-page="forest">forest</span>
+            </div>
+            <div class="user-info">
+                <a class="logout" href="/logout">Logout</a>
+                <span class="username"></span>
+                <div class="avatar">
+                    <img src="/game/assets/avatar.svg" alt="Avatar" draggable="false" />
+                </div>
+            </div>
+        </div>
+        <div class="ui">
+            <div class="notifications"></div>
+            <span class="wallet"></span>
+        </div>
+        <div class="page"></div>
+    </div>
+    <div class="float hidden">
+        <iframe frameborder="0" scrolling="no"></iframe>
+    </div>
+    <script type="module" defer>
+        import "/module/html.js";
+
+        document.qs("div#game>div.top-bar>div.user-info>div.avatar>img").addEventListener("error", e => e.target.src = "/game/assets/avatar.svg");
+
+        document.qs("div.float").addEventListener("click", e => {
+            const float = document.qs("div.float");
+            if (e.target === float) {
+                float.classList.add("hidden");
+
+                const iframe = float.qs("iframe");
+                iframe.onload = null;
+                iframe.src = "";
+
+                window.location.hash = document.body.dataset.page || "#home"; // Reset to home page when closing the float
+            }
+        });
+
+        document.qs("div#game>div.top-bar>div.user-info>span.username").addEventListener("click", () => window.location.hash = "#profile");
+        document.qs("div#game>div.top-bar>div.user-info>div.avatar").addEventListener("click", () => window.location.hash = "#profile");
+    </script>
+</body>
+</html>

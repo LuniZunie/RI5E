@@ -1,3 +1,0 @@
-export default function bin(n) {
-    return 2 ** n;
-};

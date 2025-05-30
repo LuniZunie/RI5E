@@ -1,0 +1,26 @@
+body>div#game {
+    --top-height: min(4em, 10vh);
+
+    -webkit-user-select: none;
+    user-select: none;
+
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+    background: #112;
+
+    font: normal 16px/1.5 "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: #eee;
+
+    &>div.page {
+         position: fixed;
+        top: var(--top-height);
+        left: 0;
+        width: 100%;
+        height: calc(100% - var(--top-height));
+    }
+}

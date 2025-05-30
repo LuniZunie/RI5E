@@ -1,0 +1,78 @@
+body {
+    margin: 0;
+    padding: 2vmin;
+    font: 2vmin "Courier New", Courier, monospace;
+    background: linear-gradient(135deg, #111827, #1f2937);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    height: calc(100vh - 4vmin);
+    width: calc(100vw - 4vmin);
+    overflow: hidden;
+
+    &>span.title {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2em;
+        color: #fff;
+        padding: 1vmin;
+    }
+    &>span.subtitle {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2em;
+        color: #ccc;
+        padding: 0.5vmin;
+
+        &>span { margin: 0.25em 0.5em; }
+    }
+
+    &>div.danger-zone {
+        width: 50%;
+        background: #f001;
+        border-radius: 2vmin;
+        border: 1px solid #7008;
+        padding: 2vmin;
+        margin-top: 2vmin;
+        color: #fff;
+        text-align: center;
+
+        &>span.title {
+            display: block;
+            color: #f44;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 0.75vmin;
+        }
+        &>span.description {
+            display: block;
+            font-size: 1.2em;
+            margin-bottom: 1vmin;
+        }
+
+        &>div.button {
+            -webkit-user-select: none;
+            user-select: none;
+
+            display: block;
+            float: right;
+            margin: 1vmin;
+            padding: 0.75vmin 1.5vmin;
+            background: #c00;
+            color: #fff;
+            border-radius: 1vmin;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background 0.3s ease;
+
+            &:hover { background: #f448; }
+            &:active { background: #9008; }
+        }
+    }
+}

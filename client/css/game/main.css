@@ -1,0 +1,46 @@
+body {
+    &>div.float {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        -webkit-backdrop-filter: blur(3px);
+        backdrop-filter: blur(3px);
+
+        overflow: hidden;
+        border-radius: 2vmin;
+        z-index: 3;
+
+        &>iframe {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 70vw;
+            height: 70vh;
+            transform: translate(-50%, -50%);
+            border: none;
+            border-radius: 2vmin;
+        }
+
+        &.hidden { display: none; }
+    }
+
+    *.auto-scroll {
+        overflow-x: auto;
+        overflow-y: hidden;
+
+        white-space: nowrap;
+
+        &::-webkit-scrollbar { display: none; }
+
+        &>span.scroll-text {
+            display: inline-block;
+            margin: 0em 1em;
+        }
+    }
+    *.enter-focus {
+        outline: 2px solid #44b;
+        &.disabled { outline: 2px solid #666; }
+    }
+}

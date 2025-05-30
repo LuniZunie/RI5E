@@ -3,3 +3,9 @@
 
 node_modules
 dist
+server/db
+old
+
+# DO NOT FUCKING DELETE THIS LINE
+\!*
+\!*/

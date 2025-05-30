@@ -1,0 +1,92 @@
+@keyframes notification-in {
+    from {
+        opacity: 0;
+        transform: translate(0, -5vmin);
+        margin-bottom: -5vmin;
+    }
+    to {
+        opacity: 1;
+        transform: translate(0, 0);
+        margin-bottom: 0;
+    }
+}
+@keyframes notification-out {
+    from { opacity: 1; scale: 1; }
+    to { opacity: 0; scale: 0; }
+}
+
+body>div#game>div.ui {
+    z-index: 2;
+
+    pointer-events: none;
+
+    position: fixed;
+    top: var(--top-height);
+    left: 0;
+    width: 100%;
+    height: calc(100% - var(--top-height));
+
+    &>span.wallet {
+        position: fixed;
+        bottom: 1vmin;
+        right: 1vmin;
+        padding: 1vmin 1.5vmin;
+        padding-left: 3.5vmin;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        font-size: 1.2em;
+        color: #fff;
+
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 2vmin;
+
+        &::before {
+            content: "";
+            position: absolute;
+            left: 1vmin;
+            top: 50%;
+            transform: translateY(-50%);
+
+            width: 2vmin;
+            height: 2vmin;
+
+            background-image: url(/game/assets/coin.svg);
+            background-size: cover;
+        }
+    }
+
+    &>div.notifications {
+        position: fixed;
+        top: calc(var(--top-height) + 1vmin);
+        left: 0;
+        width: 100%;
+        z-index: 4;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5vmin;
+
+        &>div.notification { /* fade in from top  */
+            z-index: 4;
+
+            padding: 1vmin 2vmin;
+            border-radius: 1vmin;
+
+            background: rgba(10, 10, 10, 0.7);
+            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px);
+
+            color: #fff;
+            font-size: 1.2em;
+            text-align: center;
+
+            animation: notification-in 0.3s ease-in-out;
+            &.out { animation: notification-out 0.3s ease-in-out; }
+        }
+    }
+}

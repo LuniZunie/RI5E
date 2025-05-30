@@ -1,0 +1,32 @@
+div.display-clock {
+    --char-height: 0px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 1em;
+    font-family: Consolas, monospace;
+
+    &>div.container {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+
+        height: var(--char-height);
+
+        overflow: hidden;
+
+        &>div.track {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+
+            transition: transform 1s ease;
+
+            &>div.character { white-space: pre; }
+        }
+    }
+}

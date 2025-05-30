@@ -1,0 +1,144 @@
+body>div#game>div.page[data-page="explore"] {
+    --size: min(calc(96vh - var(--top-height)), 50vw);
+    &>div.map {
+        display: grid;
+        grid: repeat(var(--map-size), 1fr) / repeat(var(--map-size), 1fr);
+
+        position: fixed;
+        top: calc(50% + var(--top-height) / 2);
+        left: 50%;
+        transform: translate(-50%, -50%);
+
+        border: 0.5vmin solid #5a2703;
+        border-radius: 1vmin;
+
+        overflow: hidden;
+
+        width: var(--size);
+        height: var(--size);
+
+        background: #dcdcdc;
+
+        transition: all 0.2s ease;
+
+        &>div.biome {
+            cursor: pointer;
+            border: 1px solid #2222;
+
+            &.locked {
+                border: 1px solid #222;
+                opacity: 0.5;
+            }
+            &.selected {
+                z-index: 1;
+                scale: 1.5;
+                border: 1px solid #80f;
+                opacity: 1;
+                box-shadow: 0 0 10px 2px #80f8;
+            }
+            &.fogged {
+                cursor: default;
+                opacity: 0;
+            }
+        }
+    }
+    &:has(>div.panel:not(.hidden))>div.map {
+        border-top-right-radius: 0vmin;
+        border-bottom-right-radius: 0vmin;
+    }
+
+    &>div.panel {
+        position: absolute;
+        top: 50%;
+        left: calc(50% + calc(var(--size) / 2) + 1vmin);
+        transform: translateY(-50%);
+
+        width: calc(var(--size) / 2 - 2vmin);
+        height: calc(var(--size) + 2vmin);
+
+        background: rgba(0, 0, 0, 0.5);
+        -webkit-backdrop-filter: blur(5px);
+        backdrop-filter: blur(5px);
+
+        border-top-right-radius: 2vmin;
+        border-bottom-right-radius: 2vmin;
+
+        color: white;
+        overflow: hidden;
+        white-space: nowrap;
+
+        transition: all 0.2s ease;
+
+        &.hidden {
+            width: 0vmin;
+            height: calc(var(--size) / 1.1);
+        }
+
+        &>div.title {
+            text-align: center;
+            font-size: 3vmin;
+            font-weight: bold;
+
+            padding: 0.5vmin;
+            margin-top: 1vmin;
+        }
+        &>div.description {
+            text-align: center;
+            font-size: 2vmin;
+            font-weight: bold;
+
+            padding: 0.5vmin;
+        }
+        &>div.climate {
+            text-align: center;
+            white-space: pre;
+            font-size: 1.75vmin;
+
+            padding: 1vmin;
+            margin-top: 1vmin;
+        }
+
+        &>div.button.purchase {
+            position: absolute;
+            bottom: 1vmin;
+            left: 1vmin;
+            right: 1vmin;
+
+            padding: 1vmin;
+            border-radius: 1vmin;
+
+            background: #232326;
+            text-align: center;
+
+            transition: background 0.2s ease-in-out;
+
+            &.disabled {
+                background: #232326;
+                color: #666;
+                cursor: not-allowed;
+            }
+
+            &:not(.disabled) {
+                cursor: pointer;
+                color: white;
+
+                &::before {
+                    content: "";
+                    position: absolute;
+                    left: 1vmin;
+                    top: 50%;
+                    transform: translateY(-50%);
+
+                    width: 2vmin;
+                    height: 2vmin;
+
+                    background-image: url(/game/assets/coin.svg);
+                    background-size: cover;
+                }
+
+                &:hover { background: #343436; }
+                &:active { background: #454546; }
+            }
+        }
+    }
+}
