@@ -68,9 +68,44 @@
                             }
                         });
 
-                        function update() {
-                            game.update();
-                        }
+                        document.body.addEventListener("mouseover", e => {
+                            let el = e.target;
+                            do {
+                                if (el?.dataset?.tooltip) break;
+                                el = el.parentElement;
+                            } while (el && el !== document.body);
+
+                            if (el?.dataset?.tooltip) {
+                                document.body.querySelectorAll("div.tooltip").forEach(tooltip => tooltip.remove());
+                                const tooltip = document.body.create("div", {
+                                    class: "tooltip",
+                                    content: el.dataset.tooltip,
+                                }, { end: true });
+
+                                const [ left, top ] = (rect => {
+                                    // place above, if outside window place below
+                                    let top = rect.top - tooltip.offsetHeight;
+                                    if (top < 0)
+                                        top = rect.bottom;
+
+                                    // center horizontally
+                                    let left = rect.left + (rect.width - tooltip.offsetWidth) / 2;
+                                    if (left < 0) left = 0; // prevent going off the left side of the screen
+                                    if (left + tooltip.offsetWidth > window.innerWidth)
+                                        left = window.innerWidth - tooltip.offsetWidth; // prevent going off the right side of the screen
+                                    return [ left, top ];
+                                })(el.getBoundingClientRect());
+
+                                tooltip.style.left = `${left}px`;
+                                tooltip.style.top = `${top}px`;
+
+                                el.addEventListener("mouseout", () => {
+                                    tooltip.remove();
+                                }, { once: true });
+                            }
+                        });
+
+                        function update() { game.update(); }
                         setInterval(update, 1000 / Game.TPS);
                     });
                 });

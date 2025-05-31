@@ -87,19 +87,36 @@ export const Pages = Object.freeze({
 
                     div.classList.add("selected");
                     panel.dataset.position = pos;
+                    display.dataset.position = pos;
 
                     const biome = map.get(x, y);
 
                     panel.innerHTML = `
                         <div class="title auto-scroll"></div>
                         <div class="description auto-scroll"></div>
-                        <div class="climate auto-scroll"></div>
                         <div class="button purchase">error</div>
                     `;
 
                     panel.qs("div.title").textContent = biome.constructor.name.case(Text.case.title).get();
                     panel.qs("div.description").textContent = biome.constructor.description.case(Text.case.sentence).get();
-                    panel.qs("div.climate").textContent = define(Climate, biome.climate).toString();
+                    panel.insertBefore(define(Climate, biome.climate).display(), panel.qs("div.button.purchase"));
+
+                    { // forageables
+                        const forageables = panel.create("div", { class: "forageables" }, { before: panel.qs("div.button.purchase") });
+                        forageables.create("span", { class: "title", content: "Forageables" }, { end: true });
+
+                        const list = forageables.create("div", { class: "list" }, { end: true });
+                        for (const forageable of biome.constructor.forageables) {
+                            const div = list.create("div", {
+                                class: "forageable",
+                                "data-tooltip": forageable.name.case(Text.case.title).get(2),
+                            }, { end: true });
+                            div.create("img", {
+                                src: forageable.sprite,
+                                alt: forageable.name.case(Text.case.title).get(2),
+                            }, { end: true });
+                        }
+                    }
 
                     const purchase = panel.qs("div.button.purchase");
                     purchase.classList.toggle("disabled", !biome.locked);
@@ -144,7 +161,13 @@ export const Pages = Object.freeze({
             const move = (dx, dy) => {
                 let selected = display.qs("div.biome.selected");
                 if (!selected) {
-                    selected = display.qs(`div.biome[data-position="${(sx + ex) / 2 | 0},${(sy + ey) / 2 | 0}"]`);
+                    let nx, ny;
+                    if (display.dataset.position)
+                        [ nx, ny ] = display.dataset.position.split(",").map(Number);
+                    else
+                        [ nx, ny ] = [ (sx + ex) / 2 | 0, (sy + ey) / 2 | 0 ];
+
+                    selected = display.qs(`div.biome[data-position="${nx},${ny}"]`);
                     selected?.click();
                 }
 

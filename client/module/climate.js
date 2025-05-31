@@ -1,9 +1,23 @@
+import "./html.js";
+import "./math.js";
+import Gradient from "./gradient.js";
 import Text from "./text.js";
 export default class Climate {
     static measurements = {
         altitude: new Text("Alt.").plural(false),
         temperature: new Text("Temp.").plural(false),
         humidity: new Text("Hum.").plural(false),
+    };
+
+    static #gradients = {
+        altitude: new Gradient(4096, "#16A34A", "#A3A3A3", "#60A5FA"),
+        temperature: new Gradient(4096, "#3B82F6", "#FBBF24", "#EF4444"),
+        humidity: new Gradient(4096, "#FACC15", "#9CA3AF", "#3B82F6"),
+    };
+    static svg = {
+        altitude: { low: "", medium: "", high: "" },
+        temperature: { low: "", medium: "", high: "" },
+        humidity: { low: "", medium: "", high: "" },
     };
     static noise(prng, d, a = 0.5) {
         const size = 2 ** d;
@@ -86,4 +100,33 @@ export default class Climate {
             result.push(`${abr.case().get()} ${this[m].toFixed(2)}`);
         return result.join("  —  ");
     };
+
+    display() {
+        const div = document.create("div", { class: "climate" });
+        for (const m of Object.keys(Climate.measurements)) {
+            const v = this[m];
+            const clamped = Math.clamp(v, 0, 1); // clamp to [0, 1] for gradient
+
+            const third = Math.clamp(v * 3 | 0, 0, 2); // 0, 1, or 2
+            const file = [ "low", "medium", "high" ][third];
+
+            div.create("div", {
+                class: m,
+                style: { "--color": Climate.#gradients[m]?.get?.(clamped)?.color || "#F0F" },
+                html: Climate.svg[m][file],
+                "data-tooltip": new Text(`${file} ${m} (${clamped * 100 | 0}%)`, Text.case.lower).case(Text.case.sentence).get(),
+            }, { end: true });
+        }
+
+        return div;
+    }
 };
+
+Object.keys(Climate.measurements).map(m => {
+    [ "low", "medium", "high" ].forEach(s => {
+        fetch(`/game/assets/climate/${m}/${s}.svg`)
+            .then(r => r.text())
+            .then(svg => Climate.svg[m][s] = svg.replace(/(?=stroke=")(?!#)([^"]*)/g, `stroke="var(--color, $1)`))
+            .catch(() => Climate.svg[m][s] = `<svg viewBox="0 0 100 100"><text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-size="10">Error</text></svg>`);
+    });
+});

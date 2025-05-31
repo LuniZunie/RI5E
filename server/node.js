@@ -88,7 +88,52 @@ app.get("/api/user", (req, res) => {
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 });
 
+// sync
+// This endpoint is already very fast since it only returns static data and the current timestamp.
+// To maximize speed, avoid any unnecessary async/await, file I/O, or heavy computation.
+app.get("/api/sync", (req, res) => {
+    res.set("Cache-Control", "no-store"); // ensure no caching
+    res.status(200).json({
+        time: Date.now(),
+        server: {
+            host: server.host,
+            port: server.port,
+            url: url_base
+        }
+    });
+});
+
 // user data
+async function reador(file, encoding, fallback) {
+    let resolve, reject;
+    const promise = new Promise((res, rej) => ([ resolve, reject ] = [ res, rej ]));
+    try {
+        await fs.promises.access(file, fs.constants.R_OK);
+        fs.promises.readFile(file, encoding)
+            .then(data => resolve({ status: 200, data }))
+            .catch(err => {
+                console.error("Error reading file:", err);
+                reject({ status: 500, error: "Internal server error" });
+            });
+    } catch (err) {
+        if (err.code === "ENOENT") {
+            if (fallback) {
+                fs.promises.writeFile(file, fallback, encoding)
+                    .then(() => resolve({ status: 200, data: fallback }))
+                    .catch(err => {
+                        console.error("Error creating file:", err);
+                        reject({ status: 500, error: "Internal server error" });
+                    });
+            } else
+                reject({ status: 404, error: "File not found" });
+        } else {
+            console.error("Error accessing file:", err);
+            reject({ status: 500, error: "Internal server error" });
+        }
+    }
+    return promise;
+}
+
 function get_file_path(user) {
     return `server/db/users/${user.auth_service.toLowerCase()}.${Number(user.id).toString(36)}.json`;
 }
@@ -106,7 +151,11 @@ app.get("/api/user/data", async (req, res) => { // all asynchronous to allow for
         const user = jwt.verify(token, server.jwt.secret);
         const file = get_file_path(user);
 
-        try {
+        reador(file, "utf8", "{}")
+            .then(({ status, data }) => res.status(status).json(JSON.parse(data)))
+            .catch(({ status, error }) => res.status(status).json({ error }));
+
+        /* try {
             await fs.promises.access(file, fs.constants.R_OK);
             fs.promises.readFile(file, "utf8")
                 .then(data => res.status(200).json(JSON.parse(data)))
@@ -124,7 +173,7 @@ app.get("/api/user/data", async (req, res) => { // all asynchronous to allow for
                     });
             else
                 res.status(500).json({ error: "Internal server error" });
-        }
+        } */
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 });
 // post
@@ -203,7 +252,11 @@ for (const page of server.router) {
 
     app.get(page.route,  (req, res) => fn(res.status(page.status || 200)));
 }
-app.use((req, res) => res.status(404).redirect("/404"));
+app.use((req, res) => {
+    if (req.path.endsWith(".svg"))
+        res.status(404).redirect("/game/assets/null.svg");
+    else res.status(404).send("404 Not Found");
+});
 
 app.listen(server.port, server.host, () => {
     console.log(`Server running at ${url_base}/`)

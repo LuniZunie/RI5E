@@ -8,6 +8,8 @@ import Prefab from "./prefab.js";
 import Item from './item.js';
 import Drop from './drop.js';
 
+// TODO: add algae, seaweed, and other water forageables, add cactus
+
 export default class Forageable extends Prefab {
     static id = "prefab.forageable";
 
@@ -21,6 +23,8 @@ linker.link(Forageable);
 class Grass extends Forageable {
     static id = "prefab.forageable.grass_patch";
     static name = new Text("grass patch");
+
+    static sprite = "/game/assets/forageable/grass.svg";
 
     static season = Time.Year;
     static time = new Variable("static:0", Time.day(1));
@@ -48,6 +52,8 @@ class Clover extends Forageable {
     static id = "prefab.forageable.clover_patch";
     static name = new Text("clover patch");
 
+    static sprite = "/game/assets/forageable/clover.svg";
+
     static season = Time.Year;
     static time = new Variable("error:0", Time.day(2), Time.day(1));
 
@@ -73,6 +79,8 @@ linker
 class Dandelion extends Forageable {
     static id = "prefab.forageable.dandelion";
     static name = new Text("dandelion");
+
+    static sprite = "/game/assets/forageable/dandelion.svg";
 
     static season = Time.Season.Spring;
     static time = new Variable("error:0", Time.day(3), Time.day(1));
@@ -100,6 +108,8 @@ class Mushroom extends Forageable {
     static id = "prefab.forageable.mushroom";
     static name = new Text("mushroom");
 
+    static sprite = "/game/assets/forageable/mushroom.svg";
+
     static season = Time.Year;
     static time = new Variable("error:0", Time.day(3), Time.day(1));
 
@@ -125,6 +135,8 @@ linker
 class Blackberry extends Forageable {
     static id = "prefab.forageable.blackberry_cane";
     static name = new Text("blackberry cane");
+
+    static sprite = "/game/assets/forageable/blackberry.svg";
 
     static season = Time.Season.Summer;
     static time = new Variable("error:0", Time.day(5), Time.day(2));
@@ -152,6 +164,8 @@ class Raspberry extends Forageable {
     static id = "prefab.forageable.raspberry_cane";
     static name = new Text("raspberry cane");
 
+    static sprite = "/game/assets/forageable/raspberry.svg";
+
     static season = Time.Season.Summer;
     static time = new Variable("error:0", Time.day(5), Time.day(2));
 
@@ -177,6 +191,8 @@ linker
 class Blueberry extends Forageable {
     static id = "prefab.forageable.blueberry_bush";
     static name = new Text("blueberry bush");
+
+    static sprite = "/game/assets/forageable/blueberry.svg";
 
     static season = Time.Season.Summer;
     static time = new Variable("error:0", Time.week(2), Time.day(5));
@@ -204,6 +220,8 @@ class Grape extends Forageable {
     static id = "prefab.forageable.grape_vine";
     static name = new Text("grape vine");
 
+    static sprite = "/game/assets/forageable/grape.svg";
+
     static season = Time.Season.Autumn;
     static time = new Variable("error:0", Time.week(2), Time.day(5));
 
@@ -229,6 +247,8 @@ linker
 class Strawberry extends Forageable {
     static id = "prefab.forageable.strawberry_bush";
     static name = new Text("strawberry bush");
+
+    static sprite = "/game/assets/forageable/strawberry.svg";
 
     static season = Time.Season.Spring;
     static time = new Variable("error:0", Time.week(1), Time.day(3));
@@ -256,6 +276,8 @@ class Banana extends Forageable {
     static id = "prefab.forageable.banana_tree";
     static name = new Text("banana tree");
 
+    static sprite = "/game/assets/forageable/banana.svg";
+
     static season = Time.Season.Summer;
     static time = new Variable("error:0", Time.week(2), Time.day(3));
 
@@ -281,6 +303,8 @@ linker
 class Apple extends Forageable {
     static id = "prefab.forageable.apple_tree";
     static name = new Text("apple tree");
+
+    static sprite = "/game/assets/forageable/apple.svg";
 
     static season = Time.Season.Autumn;
     static time = new Variable("error:0", Time.week(2), Time.day(3));
@@ -308,6 +332,8 @@ class Orange extends Forageable {
     static id = "prefab.forageable.orange_tree";
     static name = new Text("orange tree");
 
+    static sprite = "/game/assets/forageable/orange.svg";
+
     static season = Time.Season.Spring & Time.Season.Summer;
     static time = new Variable("error:0", Time.week(2), Time.day(2));
 
@@ -333,6 +359,8 @@ linker
 class Peach extends Forageable {
     static id = "prefab.forageable.peach_tree";
     static name = new Text("peach tree");
+
+    static sprite = "/game/assets/forageable/peach.svg";
 
     static season = Time.Season.Summer;
     static time = new Variable("error:0", Time.week(2), Time.day(2));
@@ -360,6 +388,8 @@ class Lemon extends Forageable {
     static id = "prefab.forageable.lemon_tree";
     static name = new Text("lemon tree");
 
+    static sprite = "/game/assets/forageable/lemon.svg";
+
     static season = Time.Year;
     static time = new Variable("error:0", Time.week(3), Time.day(5));
 
@@ -385,6 +415,8 @@ linker
 class Lime extends Forageable {
     static id = "prefab.forageable.lime_tree";
     static name = new Text("lime");
+
+    static sprite = "/game/assets/forageable/lime.svg";
 
     static season = Time.Season.Summer & Time.Season.Autumn;
     static time = new Variable("error:0", Time.week(3), Time.week(1));
@@ -412,6 +444,8 @@ class Cherry extends Forageable {
     static id = "prefab.forageable.cherry_tree";
     static name = new Text("cherry tree");
 
+    static sprite = "/game/assets/forageable/cherry.svg";
+
     static season = Time.Season.Spring;
     static time = new Variable("error:0", Time.week(2), Time.day(3));
 
@@ -438,6 +472,8 @@ class Pineapple extends Forageable {
     static id = "prefab.forageable.pineapple_plant";
     static name = new Text("pineapple plant");
 
+    static sprite = "/game/assets/forageable/pineapple.svg";
+
     static season = Time.Season.Spring & Time.Season.Summer;
     static time = new Variable("error:0", Time.month(1), Time.day(4));
 
@@ -463,6 +499,8 @@ linker
 class Coconut extends Forageable {
     static id = "prefab.forageable.coconut_tree";
     static name = new Text("coconut tree");
+
+    static sprite = "/game/assets/forageable/coconut.svg";
 
     static season = Time.Year;
     static time = new Variable("error:0", Time.month(2), Time.week(2));

@@ -60,4 +60,27 @@ export default class Time {
     }
 
     static get TPS() { return Time.#ticks_per_second; }
+
+    static #time = { value: Date.now(), when: Date.now() };
+    static sync_time() {
+        fetch("/api/sync", { cache: "no-store" })
+            .then(response => {
+                if (response.ok) return response.json();
+                throw new Error("Failed to sync time");
+            })
+            .then(data => {
+                if (data.time) {
+                    Time.#time.value = data.time;
+                    Time.#time.when = Date.now();
+                }
+            })
+            .catch(error => console.error("Time sync error:", error))
+            .finally(() => setTimeout(Time.sync_time, 60 * 1000)); // resync every minute
+    }
+
+    static get now() {
+        const elapsed = Date.now() - Time.#time.when;
+        return Time.#time.value + elapsed;
+    }
 }
+Time.sync_time();

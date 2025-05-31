@@ -6,6 +6,8 @@ export default class Prefab {
     static name = new Text("<none>").plural(false);
     static description = new Text("<none>").plural(false);
 
+    static sprite = "/game/assets/null.svg";
+
     quantity = 1;
 
     import(data) {

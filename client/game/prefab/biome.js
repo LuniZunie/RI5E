@@ -28,6 +28,8 @@ import {
     Coconut
 } from "./forageable.js";
 
+// TODO: add more water biomes, and a desert
+
 export default class Biome extends Prefab {
     static id = "prefab.biome";
 

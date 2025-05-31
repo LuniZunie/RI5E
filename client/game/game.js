@@ -42,7 +42,7 @@ export default class Game {
     static SPT = 1 / Time.TPS; // seconds per tick
 
     static get tick() {
-        return Math.floor(Date.now() / 1000 * Game.TPS);
+        return Math.floor(Time.now / 1000 * Game.TPS);
     }
     static get day() {
         return Math.floor(Game.tick / Time.day(1)) % (Time.month(1) / Time.day(1)) + 1;
@@ -60,7 +60,7 @@ export default class Game {
         return Time.Semester.order[Math.floor(Game.tick / Time.semester(1)) % Time.Semester.order.length];
     }
     static get year() {
-        return Math.floor(Game.tick / Time.year(1)) + 1; // 1-based year
+        return Math.floor(Game.tick / Time.year(1)) + 1;
     }
 
     #pause = {
