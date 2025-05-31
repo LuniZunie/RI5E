@@ -15,3 +15,4 @@ export default class Item extends Prefab {
     static sell_price = new Variable();
 };
 linker.link(Item);
+linker.link(Item);

@@ -12,3 +12,4 @@ export default class Drop extends Prefab {
     static item = class extends Item {};
 };
 linker.link(Drop);
+linker.link(Drop);
