@@ -10,7 +10,7 @@ import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 
 const server = JSON.parse(fs.readFileSync("server/!server.json", "utf8"));
-const url_base = `http://${server.host}:${server.port}`;
+const url_base = `http://${server.host}`;
 
 const app = express();
 
