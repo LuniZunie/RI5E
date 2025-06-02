@@ -262,6 +262,10 @@ app.post("/api/user/data", async (req, res) => {
                             return res.status(400).json({ error: "Invalid request data" });
                         }
                         changed.forEach(({ id, data }) => {
+                            if (data === undefined || data === null){
+                                inventory[id] = null; // remove item if data is null or undefined
+                                return;
+                            }
                             if (typeof data !== "object") {
                                 Logger.log("WARN", "post_user_data", null, `Invalid item in changed: ${JSON.stringify(data)}`);
                                 return res.status(400).json({ error: "Invalid request data" });

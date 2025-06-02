@@ -12,6 +12,10 @@ export default class Inventory {
     #changed = new Map();
     #removed = new Set();
 
+    #original = new Map();
+
+    #BUILD = ID_TABLE.build();
+
     constructor() {
         this.#map = new Map();
         this.#lookup = new Map();
@@ -58,7 +62,14 @@ export default class Inventory {
         if (!this.#table.has(item.constructor.id)) throw new TypeError("Item is not a valid prefab.");
         if (!this.#map.has(id)) throw new Error("Item not found in inventory.");
 
-        const before = item.export();
+        let before;
+        if (this.#original.has(id))
+            before = this.#original.get(id);
+        else {
+            before = item.export();
+            this.#original.set(id, before);
+        }
+
         fn(item);
         const after = item.export();
         this.#map.set(id, item);
@@ -123,6 +134,7 @@ export default class Inventory {
                 console.warn(`Item with ID ${id} not found in map during export.`);
         }
         this.#changed.clear(); // clear after export
+        this.#original.clear();
 
         for (const id of this.#removed) {
             const item = this.#map.get(id);
@@ -144,7 +156,7 @@ export default class Inventory {
                 const ItemClass = this.#table.get(datum.construct);
                 const instance = new ItemClass();
                 try {
-                    instance.import(datum.data);
+                    instance.import(this.#BUILD, datum.data);
                 } catch (err) { throw new Error(`${datum.construct}: ${err.message}\n${JSON.stringify(datum)}`) }
                 this.#add(instance);
             });

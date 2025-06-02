@@ -1,144 +1,64 @@
-function create_diff(before, after) {
-    if (Array.isArray(before) && Array.isArray(after)) {
-        // Attempt item matching by id
-        const useIdMatching = before.every(x => x && x.id) && after.every(x => x === null || (x && x.id));
-        if (useIdMatching) {
-            const diff = [];
-            const beforeMap = Object.fromEntries(before.map(item => [item.id, item]));
-            for (let i = 0; i < after.length; i++) {
-                const b = after[i];
-                if (b === null) {
-                    diff.push(null); // explicit removal
-                } else {
-                    const a = beforeMap[b.id];
-                    if (!a) {
-                        diff.push(b); // new item
-                    } else {
-                        const d = create_diff(a, b);
-                        diff.push(d ?? a); // if no diff, push a (could optimize to "skip")
-                    }
-                }
-            }
-            return diff;
-        } else {
-            // fallback to index-based diff
-            const maxLength = Math.max(before.length, after.length);
-            const diff = [];
-            let hasDiff = false;
+function create_diff(oldObj, newObj) {
+  if (oldObj === newObj) return;
 
-            for (let i = 0; i < maxLength; i++) {
-                const a = before[i];
-                const b = after[i];
-                if (i >= before.length || i >= after.length || b === null) {
-                    diff[i] = b;
-                    hasDiff = true;
-                } else if (typeof a === 'object' && a !== null && typeof b === 'object' && b !== null) {
-                    const nested = create_diff(a, b);
-                    if (nested && Object.keys(nested).length > 0) {
-                        diff[i] = nested;
-                        hasDiff = true;
-                    }
-                } else if (a !== b) {
-                    diff[i] = b;
-                    hasDiff = true;
-                }
-            }
+  // Handle primitives and array differences
+  if (
+    typeof oldObj !== 'object' || oldObj === null ||
+    typeof newObj !== 'object' || newObj === null ||
+    Array.isArray(oldObj) || Array.isArray(newObj)
+  ) {
+    return oldObj === newObj ? undefined : [{ k: '', u: newObj }];
+  }
 
-            return hasDiff ? diff : null;
-        }
+  const diffs = [];
+  const allKeys = new Set([...Object.keys(oldObj), ...Object.keys(newObj)]);
+
+  for (const key of allKeys) {
+    const oVal = oldObj[key];
+    const nVal = newObj[key];
+
+    if (!(key in newObj)) {
+      diffs.push({ k: key, r: 1 }); // removed
+    } else if (!(key in oldObj)) {
+      diffs.push({ k: key, a: nVal }); // added
+    } else if (
+      typeof oVal !== 'object' || oVal === null ||
+      typeof nVal !== 'object' || nVal === null ||
+      Array.isArray(oVal) || Array.isArray(nVal)
+    ) {
+      if (JSON.stringify(oVal) !== JSON.stringify(nVal)) {
+        diffs.push({ k: key, u: nVal }); // updated primitive or array
+      }
+    } else {
+      const nested = create_diff(oVal, nVal);
+      if (nested && nested.length > 0) {
+        diffs.push({ k: key, d: nested }); // nested diff
+      }
     }
+  }
 
-    if (typeof before === 'object' && before !== null &&
-        typeof after === 'object' && after !== null) {
-        const diff = {};
-        for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
-            const a = before[key];
-            const b = after[key];
-
-            if (!(key in after)) {
-                diff[key] = undefined;
-            } else if (typeof a === 'object' && a !== null &&
-                       typeof b === 'object' && b !== null) {
-                const nested = create_diff(a, b);
-                if (nested && Object.keys(nested).length > 0) {
-                    diff[key] = nested;
-                }
-            } else if (a !== b) {
-                diff[key] = b;
-            }
-        }
-        return Object.keys(diff).length > 0 ? diff : null;
-    }
-
-    return before !== after ? after : null;
+  return diffs.length > 0 ? diffs : undefined;
 }
 
 function apply_diff(base, diff) {
-    if (Array.isArray(base) && Array.isArray(diff)) {
-        const useIdMatching = base.every(x => x && x.id) && diff.every(x => x === null || (x && x.id));
-        if (useIdMatching) {
-            const baseMap = Object.fromEntries(base.map(item => [item.id, item]));
-            const result = [];
+  if (!diff) return base;
 
-            for (const patch of diff) {
-                if (patch === null) {
-                    result.push(null);
-                } else if (patch.id && baseMap[patch.id]) {
-                    const original = baseMap[patch.id];
-                    if (typeof patch === 'object' && !Array.isArray(patch)) {
-                        result.push(apply_diff(original, patch));
-                    } else {
-                        result.push(patch);
-                    }
-                } else {
-                    result.push(patch);
-                }
-            }
+  const isArray = Array.isArray(base);
+  const copy = isArray ? [...base] : { ...base };
 
-            return result;
-        } else {
-            const result = [];
-            const length = Math.max(base.length, diff.length);
+  for (const patch of diff) {
+    const key = patch.k;
 
-            for (let i = 0; i < length; i++) {
-                if (i in diff) {
-                    const patch = diff[i];
-                    if (patch === null || patch === undefined) {
-                        result[i] = null;
-                    } else if (typeof patch === 'object' && patch !== null &&
-                               typeof base[i] === 'object' && base[i] !== null) {
-                        result[i] = apply_diff(base[i], patch);
-                    } else {
-                        result[i] = patch;
-                    }
-                } else {
-                    result[i] = base[i];
-                }
-            }
-
-            return result;
-        }
+    if ('r' in patch) {
+      delete copy[key];
+    } else if ('a' in patch || 'u' in patch) {
+      copy[key] = patch.a ?? patch.u;
+    } else if ('d' in patch) {
+      copy[key] = apply_diff(base[key] ?? {}, patch.d);
     }
+  }
 
-    if (typeof base === 'object' && base !== null &&
-        typeof diff === 'object' && diff !== null) {
-        const result = { ...base };
-
-        for (const [k, v] of Object.entries(diff)) {
-            if (v === undefined) {
-                delete result[k];
-            } else if (typeof v === 'object' && v !== null &&
-                       typeof result[k] === 'object' && result[k] !== null) {
-                result[k] = apply_diff(result[k], v);
-            } else {
-                result[k] = v;
-            }
-        }
-
-        return result;
-    }
-
-    return diff;
+  return copy;
 }
 
 export { create_diff, apply_diff };

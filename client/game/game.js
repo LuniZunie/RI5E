@@ -265,14 +265,29 @@ export default class Game {
             wallet.capture(this, WalletChangeEvent);
         }
 
-        if (wallet.balance < cost) {
+        const balance = parse_formatted_number(format_number(wallet.balance));
+        if (balance < cost) {
             Notification.error("Not enough funds for this purchase.");
             return false;
         } else {
-            wallet.balance -= cost;
+            this.#user.inventory.change(wallet, w => { w.balance = balance - cost; });
             WalletChangeEvent.trigger(wallet);
             return true;
         }
+    }
+
+    sell(price) {
+        const id = this.#user.inventory.findByType(Wallet).values().next().value;
+        const wallet = this.#user.inventory.findById(id) || null;
+        if (!wallet) {
+            wallet = new Wallet();
+            this.#user.inventory.add(wallet);
+            WalletChangeEvent.connect(wallet);
+            wallet.capture(this, WalletChangeEvent);
+        }
+
+        this.#user.inventory.change(wallet, w => { w.balance += price; });
+        WalletChangeEvent.trigger(wallet);
     }
 
     async #smooth_scroll(el, dist, time, callback = () => true) {

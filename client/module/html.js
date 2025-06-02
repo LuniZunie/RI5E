@@ -1,3 +1,6 @@
+const textWidthPaper = document.createElement("canvas");
+const textWidthPen = textWidthPaper.getContext("2d");
+
 const o = {
     qs: { value(selector) { return this.querySelector(selector); } },
     qsa: { value(selector) { return this.querySelectorAll(selector); } },
@@ -12,10 +15,8 @@ const o = {
             font ??= getComputedStyle(document.body).font;
         else font ??= getComputedStyle(this).font;
 
-        const paper = document.createElement("canvas");
-        const pen = paper.getContext("2d");
-        pen.font = font;
-        return pen.measureText(text).width;
+        textWidthPen.font = font;
+        return textWidthPen.measureText(text).width;
     } },
     duplicate: { value(n) { // n = 1 (returns [ Node ]) is NOT the same as n = null | undefined (returns Node)
         if (this instanceof Document)

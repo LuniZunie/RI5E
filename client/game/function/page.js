@@ -4,6 +4,11 @@ import define from "../../module/define.js";
 import format_number from "../../module/format-number.js";
 import Text from "../../module/text.js";
 
+import Notification from "./notification.js";
+
+import Time from "../time.js";
+import Wallet from "../prefab/wallet.js";
+
 export default class Page {
     #name;
     #html = `
@@ -93,18 +98,22 @@ export const Pages = Object.freeze({
                     const biome = map.get(x, y);
 
                     panel.qsa("*[data-tooltip]").forEach(el => el.onmouseout?.());
-                    panel.innerHTML = `
-                        <div class="title auto-scroll"></div>
-                        <div class="description auto-scroll"></div>
-                        <div class="button purchase">error</div>
-                    `;
 
-                    panel.qs("div.title").textContent = biome.constructor.name.case(Text.case.title).get();
-                    panel.qs("div.description").textContent = biome.constructor.description.case(Text.case.sentence).get();
-                    panel.insertBefore(define(Climate, biome.climate).display(), panel.qs("div.button.purchase"));
+                    panel.innerHTML = "";
+
+                    panel.create("div", {
+                        class: "title auto-scroll",
+                        content: biome.constructor.name.case(Text.case.title).get()
+                    }, { end: true });
+                    panel.create("div", {
+                        class: "description auto-scroll",
+                        content: biome.constructor.description.case(Text.case.sentence).get()
+                    }, { end: true });
+
+                    panel.appendChild(define(Climate, biome.climate).display());
 
                     { // forageables
-                        const forageables = panel.create("div", { class: "forageables" }, { before: panel.qs("div.button.purchase") });
+                        const forageables = panel.create("div", { class: "forageables" }, { end: true });
                         forageables.create("span", { class: "title", content: "Forageables" }, { end: true });
 
                         const list = forageables.create("div", { class: "list" }, { end: true });
@@ -121,6 +130,10 @@ export const Pages = Object.freeze({
                         }
                     }
 
+                    panel.create("div", { class: "button purchase disabled", content: "Loading..." }, { end: true });
+                    panel.create("div", { class: "button forage hidden", content: "Forage" }, { end: true });
+                    panel.create("div", { class: "button fish hidden", content: "Fish" }, { end: true });
+
                     const purchase = panel.qs("div.button.purchase");
                     purchase.classList.toggle("disabled", !biome.locked);
 
@@ -129,14 +142,14 @@ export const Pages = Object.freeze({
                         purchase.textContent = cost;
 
                         purchase.onclick = () => {
-                            if (biome.locked) {
+                            if (biome.locked && !fogged(x, y)) {
                                 if (game.pay(cost)) {
-                                    biome.locked = false;
+                                    game.user.inventory.change(biome, b => { b.locked = false; });
                                     div.classList.remove("locked");
 
                                     purchase.onclick = null;
-                                    purchase.classList.remove("enter-focus", "disabled");
-                                    purchase.textContent = "Purchased";
+                                    div.click();
+                                    div.click();
 
                                     [ [ x + 1, y ], [ x - 1, y ], [ x, y + 1 ], [ x, y - 1 ] ].forEach(([ nx, ny ]) => {
                                         const neighbor = display.qs(`div.biome.fogged[data-position="${nx},${ny}"]`);
@@ -145,15 +158,62 @@ export const Pages = Object.freeze({
                                             neighbor.style.background = map.get(nx, ny).constructor.sprite;
                                         }
                                     });
-
-                                    game.export();
-                                } else
-                                    purchase.classList.add("enter-focus");
+                                }
                             }
                         };
 
                         purchase.classList.add("enter-focus");
-                    } else purchase.textContent = "Already Purchased";
+                    } else {
+                        purchase.classList.add("hidden");
+                        purchase.classList.remove("disabled", "enter-focus");
+
+                        const forage = panel.qs("div.button.forage");
+                        forage.classList.remove("hidden");
+                        forage.classList.toggle("disabled", biome.constructor.forageables.length === 0);
+                        forage.classList.add("enter-focus", "tab-focus-1");
+                        forage.onclick = () => {
+                            if (!biome.locked) {
+                                const forageables = biome.forageables;
+
+                                let foraged = false;
+                                game.user.inventory.change(biome, biome => {
+                                    biome.forageables = forageables.filter(forageable => {
+                                        if (forageable.grown <= Time.now) {
+                                            foraged = true;
+                                            const drop = forageable.constructor.drop;
+                                            const q = drop.yield.positive;
+
+                                            const item = drop.item;
+                                            const itemName = item.name.case(Text.case.title).get(q);
+                                            if (item.sellable) {
+                                                const price = item.sell_price.positive * q;
+                                                game.sell(price);
+
+                                                Notification.info(`Foraged ${q} ${itemName} for ${format_number(price)} coins`);
+                                            } else {
+                                                game.user.inventory.add(define(item, {quantity: q }));
+                                                Notification.info(`Foraged ${q} ${itemName}`);
+                                            }
+
+                                            return false; // remove forageable from the biome
+                                        }
+
+                                        return true; // keep forageable in the biome
+                                    });
+                                });
+
+                                if (!foraged) {
+                                    Notification.warning("No forageables available at this time.");
+                                    return;
+                                }
+                            }
+                        };
+
+                        const fish = panel.qs("div.button.fish");
+                        fish.classList.remove("hidden");
+                        fish.classList.toggle("disabled", !biome.constructor.fishable);
+                        fish.classList.add("enter-focus", "tab-focus-2");
+                    }
 
                     panel.classList.remove("hidden");
                 });

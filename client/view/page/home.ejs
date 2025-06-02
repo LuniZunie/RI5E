@@ -59,10 +59,8 @@
                             switch (e.key) {
                                 case "Enter":
                                     document.querySelectorAll("*.enter-focus:not(.disabled)").forEach(el => {
-                                        if (getComputedStyle(el).display !== "none") {
-                                            el.classList.remove("enter-focus");
+                                        if (getComputedStyle(el).display !== "none")
                                             el.click();
-                                        }
                                     });
                                     break;
                             }

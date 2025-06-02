@@ -1,7 +1,6 @@
 import "../../module/object.js";
 import Text from "../../module/text.js";
 import UUID from "../../module/uuid.js";
-import ID_TABLE from "../id-table.js";
 
 export default class Prefab {
     static id = "prefab";
@@ -13,21 +12,20 @@ export default class Prefab {
     id;
     quantity = 1;
 
-    import(data) {
-        const table = ID_TABLE.build();
+    import(BUILD, data) {
         if (!Object.match(data, this.constructor.format)) throw new TypeError("Invalid import.");
         for (const [ k, v ] of Object.entries(data)) {
             if (v.prefab) {
-                const prefab = new (table.get(v.id))();
-                prefab.import(v.data);
+                const prefab = new (BUILD.get(v.id))();
+                prefab.import(BUILD, v.data);
                 this[k] = prefab;
             } else if (Array.isArray(v)) {
                 this[k] = v
                     .filter(x => x !== null && x !== undefined)
                     .map(x => {
                         if (x.prefab) {
-                            const prefab = new (table.get(x.id))();
-                            prefab.import(x.data);
+                            const prefab = new (BUILD.get(x.id))();
+                            prefab.import(BUILD, x.data);
                             return prefab;
                         }
                         return x;
