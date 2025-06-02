@@ -7,6 +7,7 @@ import DisplayClock from "../module/display-clock.js";
 import Linker from "../../module/linker.js";
 import Text from "../module/text.js";
 import Variable from "../module/variable.js";
+import UUID from "../module/uuid.js";
 import format_number, { parse_formatted_number } from "../module/format-number.js";
 
 import Notification from "./function/notification.js";
@@ -90,7 +91,7 @@ export default class Game {
     };
 
     constructor(O) {
-        this.#instance = window.crypto.randomUUID();
+        this.#instance = UUID();
         if (O.user instanceof User)
             this.#user = O.user;
         else { // TODO: error popup
