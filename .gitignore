@@ -4,7 +4,7 @@
 node_modules
 dist
 server/db
-old
+*.log
 
 # DO NOT FUCKING DELETE THIS LINE
 \!*

@@ -166,20 +166,20 @@ export default class Game {
         await this.import();
 
         { // game map
-            this.#map = this.#user.find(GameMap)[0];
+            const id = this.#user.inventory.findByType(GameMap).values().next().value;
+            this.#map = this.#user.inventory.findById(id) || null;
             if (!this.#map) {
                 this.#map = new GameMap();
-                this.#user.add(this.#map);
                 this.#user.inventory.add(this.#map);
             }
             this.#map.generate(this);
         }
 
         { // wallet
-            let wallet = this.#user.find(Wallet)[0];
+            const id = this.#user.inventory.findByType(Wallet).values().next().value;
+            let wallet = this.#user.inventory.findById(id) || null;
             if (!wallet) {
                 wallet = new Wallet();
-                this.#user.add(wallet);
                 this.#user.inventory.add(wallet);
             }
 
@@ -217,7 +217,7 @@ export default class Game {
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return response.json();
             })
-            .then(data => this.#user.import(decodeJSON(data.data)))
+            .then(data => this.#user.inventory.import(data?.inventory))
             .catch(error => console.error("Game: Failed to load user data:", error))
             .finally(() => { this.#pause.loading = false; });
         return true;
@@ -227,15 +227,11 @@ export default class Game {
         if (Object.any(this.#pause)) return false;
         this.#pause.export = true;
 
-        const { added, changed, removed } = this.#user.export();
-        const body = {};
-        if (added.length | changed.length | removed.length) {
-            if (added.length > 0) body.added = encodeJSON(added);
-            if (changed.length > 0) body.changed = encodeJSON(changed)
-            if (removed.length > 0) body.removed = encodeJSON(removed);
-        } else
+        const { added, changed, removed } = this.#user.inventory.export();
+        if (!(added.length | changed.length | removed.length))
             return true; // nothing to export
 
+        const body = { added, changed, removed };
         await fetch("api/user/data", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -260,7 +256,15 @@ export default class Game {
             return false;
         }
 
-        const wallet = this.#user.find(Wallet)[0];
+        const id = this.#user.inventory.findByType(Wallet).values().next().value;
+        const wallet = this.#user.inventory.findById(id) || null;
+        if (!wallet) {
+            wallet = new Wallet();
+            this.#user.inventory.add(wallet);
+            WalletChangeEvent.connect(wallet);
+            wallet.capture(this, WalletChangeEvent);
+        }
+
         if (wallet.balance < cost) {
             Notification.error("Not enough funds for this purchase.");
             return false;

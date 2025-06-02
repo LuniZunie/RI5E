@@ -18,9 +18,20 @@ export default class Prefab {
         if (!Object.match(data, this.constructor.format)) throw new TypeError("Invalid import.");
         for (const [ k, v ] of Object.entries(data)) {
             if (v.prefab) {
-                const prefab = table.get(v.id);
+                const prefab = new (table.get(v.id))();
                 prefab.import(v.data);
                 this[k] = prefab;
+            } else if (Array.isArray(v)) {
+                this[k] = v
+                    .filter(x => x !== null && x !== undefined)
+                    .map(x => {
+                        if (x.prefab) {
+                            const prefab = new (table.get(x.id))();
+                            prefab.import(x.data);
+                            return prefab;
+                        }
+                        return x;
+                    });
             } else this[k] = v;
         }
     }

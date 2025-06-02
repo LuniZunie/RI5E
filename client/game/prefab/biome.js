@@ -53,7 +53,7 @@ export default class Biome extends Prefab {
         climate: { required: true, test: v => Object.match(v, Climate.format) },
         distance: { required: true, test: v => Number.isFinite(v) && v >= 0 },
         locked: { required: false, test: v => typeof v === "boolean" },
-        forageables: { required: false, test: v => Array.isArray(v) && v.every(f => f instanceof Forageable || Object.match(f.data, Forageable.format)) },
+        forageables: { required: false, test: v => Array.isArray(v) && v.every(f => f === null || f instanceof Forageable || Object.match(f.data, Forageable.format)) },
     };
 
     capture(game, event) {
@@ -87,9 +87,11 @@ export default class Biome extends Prefab {
                         changed = true; // new forageable is in season
                     }
                 }
-                this.forageables = temp;
+
                 if (changed)
-                    game.user.change(this);
+                    game.user.inventory.change(this, biome => {
+                        biome.forageables = temp;
+                    });
             } break;
         }
     }

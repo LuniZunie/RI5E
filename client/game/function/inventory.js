@@ -1,6 +1,8 @@
 import Prefab from "../prefab/prefab.js";
 import ID_TABLE from "../id-table.js";
 
+import { create_diff } from "../../global/module/diff.js";
+
 export default class Inventory {
     #map;
     #lookup;
@@ -16,23 +18,11 @@ export default class Inventory {
         this.#table = ID_TABLE.build();
     }
 
-    static #diff(before, after) {
-        const diff = {};
-        for (const [ k, v ] of Object.entries(after)) {
-            const [ a, b ] = [ before[k], after[k] ];
-            if (typeof a === "object" && a !== null && typeof b === "object" && b !== null) {
-                const nestedDiff = Inventory.#diff(a, b);
-                if (Object.keys(nestedDiff).length > 0)
-                    diff[k] = nestedDiff;
-            } else if (a !== b)
-                diff[k] = b;
-        }
-        for (const k of Object.keys(before)) {
-            if (!(k in after))
-                diff[k] = null; // property was removed
-        }
-
-        return diff;
+    #add_to_lookup(constructor, id) {
+        if (this.#lookup.has(constructor))
+            this.#lookup.get(constructor).add(id);
+        else
+            this.#lookup.set(constructor, new Set([ id ]));
     }
 
     #add(item) {
@@ -43,31 +33,39 @@ export default class Inventory {
         if (this.#map.has(item.id)) throw new Error("Item already exists in inventory.");
 
         this.#map.set(id, item);
-        if (this.#lookup.has(item.constructor.id))
-            this.#lookup.get(item.constructor.id).add(id);
-        else
-            this.#lookup.set(item.constructor.id, new Set([ id ]));
+
+        // id's formatted with "#" and "." as separators
+        // separate the id so that an item with id "item.123or.id.split(/[#.]/);#type" can be found by "item#abc.123#type" or "item#abc.123" or "item#abc" or "item"
+        const idParts = item.constructor.id.split(/(?=#|\.|\#)/);
+        for (let i = 0; i < idParts.length; i++) {
+            const part = idParts.slice(0, i + 1).join("");
+            this.#add_to_lookup(part, id);
+        }
     }
 
     add(item) {
         this.#add(item);
-        this.#added.set(id);
+
+        const id = item.id;
+        this.#added.add(id);
         if (this.#removed.has(id)) this.#removed.delete(id);
     }
-    change(item) {
+    change(item, fn) {
+        if (typeof fn !== "function") throw new TypeError("Callback must be a function.");
         if (!(item instanceof Prefab)) throw new TypeError("Item must be an instance of Prefab.");
 
         const id = item.id;
         if (!this.#table.has(item.constructor.id)) throw new TypeError("Item is not a valid prefab.");
         if (!this.#map.has(id)) throw new Error("Item not found in inventory.");
 
-        const before = this.#map.get(id).export();
+        const before = item.export();
+        fn(item);
         const after = item.export();
         this.#map.set(id, item);
 
         if (this.#added.has(id))
             return;
-        this.#changed.set(id, Inventory.#diff(before, after));
+        this.#changed.set(id, create_diff(before, after));
         return;
     }
     remove(item) {
@@ -92,13 +90,13 @@ export default class Inventory {
         return;
     }
 
-    findById(id) {
-        if (typeof id !== "string" || id.length === 0) throw new TypeError("Invalid ID.");
+    findById(id = "") {
+        if (typeof id !== "string") throw new TypeError("Invalid ID.");
         return this.#map.get(id) || null;
     }
     findByType(type) {
-        if (!this.#table.has(type)) throw new TypeError("Invalid type.");
-        return this.#lookup.get(type) || new Set();
+        if (!this.#table.has(type.id)) throw new TypeError("Invalid type.");
+        return this.#lookup.get(type.id) || new Set();
     }
 
     export() {
@@ -139,15 +137,15 @@ export default class Inventory {
     }
     import(data) {
         try {
-            (data || {}).forEach(item => {
-                if (typeof item !== "object" || item === null || !item.id || !this.#table.has(item.id))
+            Object.values(data || {}).forEach(datum => {
+                if (typeof datum !== "object" || datum === null || !datum.construct || !this.#table.has(datum.construct))
                     throw new TypeError(`Invalid item data`);
 
-                const ItemClass = this.#table.get(item.id);
+                const ItemClass = this.#table.get(datum.construct);
                 const instance = new ItemClass();
                 try {
-                    instance.import(item.data);
-                } catch (err) { throw new Error(`${item.id}: ${err.message}`); }
+                    instance.import(datum.data);
+                } catch (err) { throw new Error(`${datum.construct}: ${err.message}\n${JSON.stringify(datum)}`) }
                 this.#add(instance);
             });
             return true;

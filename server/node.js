@@ -10,7 +10,7 @@ import { Strategy as GitHubStrategy } from "passport-github2";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 
-import { encodeJSON, decodeJSON } from "../client/global/module/base64.js";
+import { apply_diff } from "../client/global/module/diff.js";
 
 const server = JSON.parse(fs.readFileSync("server/!server.json", "utf8"));
 const url_base = server.production ? `https://${server.domain}` : `http://${server.host}:${server.port}`;
@@ -201,7 +201,7 @@ app.get("/api/user/data", async (req, res) => { // all asynchronous to allow for
         const file = get_file_path(user);
 
         read_or(file, "utf8", "{}", "get_user_data")
-            .then(({ status, data }) => res.status(status).json({ data: encodeJSON(JSON.parse(data)) }))
+            .then(({ status, data }) => res.status(status).json(JSON.parse(data)))
             .catch(({ status, error }) => res.status(status).json({ error }));
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 });
@@ -244,39 +244,36 @@ app.post("/api/user/data", async (req, res) => {
                     let { added, changed, removed } = req.body;
 
                     if (added) {
-                        added = decodeJSON(added);
                         if (!Array.isArray(added)) {
                             Logger.log("WARN", "post_user_data", null, "Invalid added data, expected array");
                             return res.status(400).json({ error: "Invalid request data" });
                         }
-                        added.forEach(({ id, data: item }) => {
-                            if (typeof item !== "object") {
-                                Logger.log("WARN", "post_user_data", null, `Invalid item in added: ${JSON.stringify(item)}`);
+                        added.forEach(({ id, construct, data }) => {
+                            if (typeof data !== "object") {
+                                Logger.log("WARN", "post_user_data", null, `Invalid item in added: ${JSON.stringify(data)}`);
                                 return res.status(400).json({ error: "Invalid request data" });
                             }
-                            inventory[id] = item;
+                            inventory[id] = { construct, data };
                         });
                     }
                     if (changed) {
-                        changed = decodeJSON(changed);
                         if (!Array.isArray(changed)) {
                             Logger.log("WARN", "post_user_data", null, "Invalid changed data, expected array");
                             return res.status(400).json({ error: "Invalid request data" });
                         }
-                        changed.forEach(({ id, data: item }) => {
-                            if (typeof item !== "object") {
-                                Logger.log("WARN", "post_user_data", null, `Invalid item in changed: ${JSON.stringify(item)}`);
+                        changed.forEach(({ id, data }) => {
+                            if (typeof data !== "object") {
+                                Logger.log("WARN", "post_user_data", null, `Invalid item in changed: ${JSON.stringify(data)}`);
                                 return res.status(400).json({ error: "Invalid request data" });
                             }
                             if (!inventory[id]) {
                                 Logger.log("WARN", "post_user_data", null, `Item to change not found in inventory: ${id}`);
                                 return res.status(400).json({ error: "Invalid request data" });
                             }
-                            inventory[id] = item;
+                            inventory[id].data = apply_diff(inventory[id].data, data);
                         });
                     }
                     if (removed) {
-                        removed = decodeJSON(removed);
                         if (!Array.isArray(removed)) {
                             Logger.log("WARN", "post_user_data", null, "Invalid removed data, expected array");
                             return res.status(400).json({ error: "Invalid request data" });
@@ -297,13 +294,6 @@ app.post("/api/user/data", async (req, res) => {
                     Logger.log("ERROR", "post_user_data", null, `Failed to write file ${file}: ${err.message}`);
                     res.status(500).json({ error: "Internal server error" });
                 });
-
-            /* recursive_write(file, JSON.stringify(req.body, null, 2), "utf8", "post_user_data")
-                .then(() => res.status(200).json({ message: "User data saved successfully" }))
-                .catch(err => {
-                    Logger.log("ERROR", "post_user_data", null, `Failed to write file ${file}: ${err.message}`);
-                    res.status(500).json({ error: "Internal server error" });
-                }); */
         }
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 });

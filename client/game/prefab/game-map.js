@@ -39,12 +39,15 @@ export default class GameMap extends Prefab {
     };
 
     generate(game) {
+        console.groupCollapsed(`GameMap: Generating map with seed ${this.seed}`);
         const Biomes = linker.goto(Biome).list(Linker.Terminus, 1);
 
-        const biomes = game.user.find(Biome);
+        const biomes = game.user.inventory.findByType(Biome).values();
         const current_map = {};
-        for (const biome of biomes)
+        for (const id of biomes) {
+            const biome = game.user.inventory.findById(id);
             current_map[`${biome.x},${biome.y}`] = biome;
+        }
 
         const bin_size = GameMap.#size, size = 2 ** bin_size;
 
@@ -72,7 +75,7 @@ export default class GameMap extends Prefab {
             if (!biome || !(biome instanceof match && define(Climate, biome.climate).compare(climate) === 0)) { // biome not found or not matching
                 if (biome) {
                     console.warn(`GameMap: Found existing biome at ${key} but it does not match the new biome.`);
-                    game.user.remove(biome);
+                    game.user.inventory.remove(biome);
                 }
                 console.log(`GameMap: Generating biome at ${key}.`);
 
@@ -81,13 +84,15 @@ export default class GameMap extends Prefab {
                     distance: dist,
                     locked: !((x === Math.floor(cx) || x === Math.ceil(cx)) && (y === Math.floor(cy) || y === Math.ceil(cy)))
                 });
-                game.user.add(biome);
+                game.user.inventory.add(biome);
             }
 
             DayChangeEvent.connect(biome); // biome will generate forageables on day change
             map[y * size + x] = biome;
         }
         this.map.set(map);
+
+        console.groupEnd();
     }
 };
 linker.link(GameMap);
