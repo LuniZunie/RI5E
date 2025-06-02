@@ -154,26 +154,6 @@ app.get("/api/user/data", async (req, res) => { // all asynchronous to allow for
         reador(file, "utf8", "{}")
             .then(({ status, data }) => res.status(status).json(JSON.parse(data)))
             .catch(({ status, error }) => res.status(status).json({ error }));
-
-        /* try {
-            await fs.promises.access(file, fs.constants.R_OK);
-            fs.promises.readFile(file, "utf8")
-                .then(data => res.status(200).json(JSON.parse(data)))
-                .catch(err => {
-                    console.error("Error reading user data file:", err);
-                    res.status(500).json({ error: "Internal server error" });
-                });
-        } catch (err) {
-            if (err.code === "ENOENT")
-                fs.promises.writeFile(file, "{}", "utf8")
-                    .then(() => res.status(200).json({}))
-                    .catch(err => {
-                        console.error("Error creating user data file:", err);
-                        res.status(500).json({ error: "Internal server error" });
-                    });
-            else
-                res.status(500).json({ error: "Internal server error" });
-        } */
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 });
 // post
@@ -258,6 +238,6 @@ app.use((req, res) => {
     else res.status(404).send("404 Not Found");
 });
 
-app.listen(server.port, server.host, () => {
+app.listen(server.port, server.listen, () => {
     console.log(`Server running at ${url_base}/`)
 });
