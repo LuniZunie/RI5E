@@ -40,6 +40,7 @@ export default class Biome extends Prefab {
     static forageables = [];
     static fishable = false;
 
+    element;
     x; y;
     climate;
     distance;
@@ -60,32 +61,20 @@ export default class Biome extends Prefab {
         switch (event.id) {
             case "prefab.game_event.day_change": {
                 const target = this.constructor.forageables;
-                if (target.length === 0) return;
-
-                const forageables = this.forageables;
-                if (forageables.length === target.length) return;
+                if (target.length === 0)
+                    return; // no forageables to check
 
                 const temp = [];
                 let changed = false;
                 for (const forageable of target) {
-                    const exists = forageables.find(f => f.constructor.id === forageable.id);
-                    if (exists) {
-                        if (
-                            (exists.constructor.season & Time.Month[Time.getMonth(exists.grown)]) &&
-                            (exists.constructor.season & Time.Month[Time.getMonth()])
+                    const thisForageable = this.forageables.find(f => f.constructor.id === forageable.id) || new forageable();
+                    if (
+                        (thisForageable.constructor.season & Time.Month[Time.getMonth(thisForageable.grown)]) &&
+                        (thisForageable.constructor.season & Time.Month[Time.getMonth()])
                         )
-                            temp.push(exists);
-                        else
-                            changed = true; // existing forageable is not in season, remove it
-                        continue;
-                    }
-
-                    // Add a new forageable to the biome
-                    const newForageable = new forageable();
-                    if (newForageable.grown > 0) {
-                        temp.push(newForageable);
-                        changed = true; // new forageable is in season
-                    }
+                        temp.push(thisForageable);
+                    else
+                        changed = true; // existing forageable is not in season, remove it
                 }
 
                 if (changed)

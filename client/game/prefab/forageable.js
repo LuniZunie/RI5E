@@ -27,10 +27,7 @@ export default class Forageable extends Prefab {
 
     constructor() {
         super();
-        const grown = Time.now + this.constructor.time.positive;
-        if (!(this.constructor.season & Time.Month[Time.getMonth(grown)]))
-            return;
-        this.grown = grown;
+        this.grown = Time.now + this.constructor.time.positive;
     }
 };
 linker.link(Forageable);
@@ -38,6 +35,7 @@ linker.link(Forageable);
 class Grass extends Forageable {
     static id = "prefab.forageable.grass_patch";
     static name = new Text("grass patch");
+    static description = new Text("Year-round").plural(false);
 
     static sprite = "/game/assets/forageable/grass.svg";
 
@@ -66,6 +64,7 @@ linker
 class Clover extends Forageable {
     static id = "prefab.forageable.clover_patch";
     static name = new Text("clover patch");
+    static description = new Text("Year-round").plural(false);
 
     static sprite = "/game/assets/forageable/clover.svg";
 
@@ -82,7 +81,7 @@ class Clover extends Forageable {
             static name = new Text("clover");
 
             static sellable = true;
-            static sell_price = new Variable("variance:2", 0.02, .0025);
+            static sell_price = new Variable("variance:2", 1, .0015);
         };
     }
 };
@@ -94,6 +93,7 @@ linker
 class Dandelion extends Forageable {
     static id = "prefab.forageable.dandelion";
     static name = new Text("dandelion");
+    static description = new Text("Spring").plural(false);
 
     static sprite = "/game/assets/forageable/dandelion.svg";
 
@@ -122,6 +122,7 @@ linker
 class Mushroom extends Forageable {
     static id = "prefab.forageable.mushroom";
     static name = new Text("mushroom");
+    static description = new Text("Year-round").plural(false);
 
     static sprite = "/game/assets/forageable/mushroom.svg";
 
@@ -150,6 +151,7 @@ linker
 class Blackberry extends Forageable {
     static id = "prefab.forageable.blackberry_cane";
     static name = new Text("blackberry cane");
+    static description = new Text("Summer").plural(false);
 
     static sprite = "/game/assets/forageable/blackberry.svg";
 
@@ -178,6 +180,7 @@ linker
 class Raspberry extends Forageable {
     static id = "prefab.forageable.raspberry_cane";
     static name = new Text("raspberry cane");
+    static description = new Text("Summer").plural(false);
 
     static sprite = "/game/assets/forageable/raspberry.svg";
 
@@ -206,6 +209,7 @@ linker
 class Blueberry extends Forageable {
     static id = "prefab.forageable.blueberry_bush";
     static name = new Text("blueberry bush");
+    static description = new Text("Summer").plural(false);
 
     static sprite = "/game/assets/forageable/blueberry.svg";
 
@@ -234,6 +238,7 @@ linker
 class Grape extends Forageable {
     static id = "prefab.forageable.grape_vine";
     static name = new Text("grape vine");
+    static description = new Text("Autumn").plural(false);
 
     static sprite = "/game/assets/forageable/grape.svg";
 
@@ -262,6 +267,7 @@ linker
 class Strawberry extends Forageable {
     static id = "prefab.forageable.strawberry_bush";
     static name = new Text("strawberry bush");
+    static description = new Text("Spring").plural(false);
 
     static sprite = "/game/assets/forageable/strawberry.svg";
 
@@ -272,7 +278,7 @@ class Strawberry extends Forageable {
         static id = "prefab.forageable.strawberry_bush>prefab.drop#drop";
         static name = new Text("strawberry");
 
-        static yield = new Variable("error:0", 2, 1);
+        static yield = new Variable("error:0", 5, 3);
         static item = class extends Item {
             static id = "prefab.forageable.strawberry_bush>prefab.drop#drop>prefab.item#item";
             static name = new Text("strawberry");
@@ -290,6 +296,7 @@ linker
 class Banana extends Forageable {
     static id = "prefab.forageable.banana_tree";
     static name = new Text("banana tree");
+    static description = new Text("Summer").plural(false);
 
     static sprite = "/game/assets/forageable/banana.svg";
 
@@ -318,6 +325,7 @@ linker
 class Apple extends Forageable {
     static id = "prefab.forageable.apple_tree";
     static name = new Text("apple tree");
+    static description = new Text("Autumn").plural(false);
 
     static sprite = "/game/assets/forageable/apple.svg";
 
@@ -346,6 +354,7 @@ linker
 class Orange extends Forageable {
     static id = "prefab.forageable.orange_tree";
     static name = new Text("orange tree");
+    static description = new Text("Spring & Summer").plural(false);
 
     static sprite = "/game/assets/forageable/orange.svg";
 
@@ -374,6 +383,7 @@ linker
 class Peach extends Forageable {
     static id = "prefab.forageable.peach_tree";
     static name = new Text("peach tree");
+    static description = new Text("Summer").plural(false);
 
     static sprite = "/game/assets/forageable/peach.svg";
 
@@ -402,6 +412,7 @@ linker
 class Lemon extends Forageable {
     static id = "prefab.forageable.lemon_tree";
     static name = new Text("lemon tree");
+    static description = new Text("Year-round").plural(false);
 
     static sprite = "/game/assets/forageable/lemon.svg";
 
@@ -430,6 +441,7 @@ linker
 class Lime extends Forageable {
     static id = "prefab.forageable.lime_tree";
     static name = new Text("lime");
+    static description = new Text("Summer & Autumn").plural(false);
 
     static sprite = "/game/assets/forageable/lime.svg";
 
@@ -458,6 +470,7 @@ linker
 class Cherry extends Forageable {
     static id = "prefab.forageable.cherry_tree";
     static name = new Text("cherry tree");
+    static description = new Text("Spring").plural(false);
 
     static sprite = "/game/assets/forageable/cherry.svg";
 
@@ -486,6 +499,7 @@ linker
 class Pineapple extends Forageable {
     static id = "prefab.forageable.pineapple_plant";
     static name = new Text("pineapple plant");
+    static description = new Text("Spring & Summer").plural(false);
 
     static sprite = "/game/assets/forageable/pineapple.svg";
 
@@ -514,6 +528,7 @@ linker
 class Coconut extends Forageable {
     static id = "prefab.forageable.coconut_tree";
     static name = new Text("coconut tree");
+    static description = new Text("Year-round").plural(false);
 
     static sprite = "/game/assets/forageable/coconut.svg";
 

@@ -38,6 +38,8 @@ linker.link(GameEvent);
 class TickEvent extends GameEvent {
     static id = "prefab.game_event.tick";
     static type = "tick";
+
+    static prefabs = new Map();
 }
 linker.goto(GameEvent).link(TickEvent);
 
@@ -45,36 +47,48 @@ linker.goto(GameEvent).link(TickEvent);
 class DayChangeEvent extends GameEvent {
     static id = "prefab.game_event.day_change";
     static type = "day_change";
+
+    static prefabs = new Map();
 }
 linker.goto(GameEvent).link(DayChangeEvent);
 
 class WeekChangeEvent extends GameEvent {
     static id = "prefab.game_event.week_change";
     static type = "week_change";
+
+    static prefabs = new Map();
 }
 linker.goto(GameEvent).link(WeekChangeEvent);
 
 class MonthChangeEvent extends GameEvent {
     static id = "prefab.game_event.month_change";
     static type = "month_change";
+
+    static prefabs = new Map();
 }
 linker.goto(GameEvent).link(MonthChangeEvent);
 
 class SeasonChangeEvent extends GameEvent {
     static id = "prefab.game_event.season_change";
     static type = "season_change";
+
+    static prefabs = new Map();
 }
 linker.goto(GameEvent).link(SeasonChangeEvent);
 
 class SemesterChangeEvent extends GameEvent {
     static id = "prefab.game_event.semester_change";
     static type = "semester_change";
+
+    static prefabs = new Map();
 }
 linker.goto(GameEvent).link(SemesterChangeEvent);
 
 class YearChangeEvent extends GameEvent {
     static id = "prefab.game_event.year_change";
     static type = "year_change";
+
+    static prefabs = new Map();
 }
 linker.goto(GameEvent).link(YearChangeEvent);
 
@@ -83,6 +97,8 @@ linker.goto(GameEvent).link(YearChangeEvent);
 class WalletChangeEvent extends GameEvent {
     static id = "prefab.game_event.wallet_change";
     static type = "wallet_change";
+
+    static prefabs = new Map();
 }
 linker.goto(GameEvent).link(WalletChangeEvent);
 

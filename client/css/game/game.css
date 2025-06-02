@@ -17,10 +17,26 @@ body>div#game {
     color: #eee;
 
     &>div.page {
-         position: fixed;
+        position: fixed;
         top: var(--top-height);
         left: 0;
         width: 100%;
         height: calc(100% - var(--top-height));
+    }
+
+    & div.coins {
+        display: inline-block;
+        &::before {
+            content: "";
+            float: left;
+            margin-top: 0.25em;
+            margin-right: 0.5ex;
+
+            width: 1em;
+            height: 1em;
+
+            background-image: url(/game/assets/coin.svg);
+            background-size: cover;
+        }
     }
 }

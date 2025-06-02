@@ -120,7 +120,7 @@ export const Pages = Object.freeze({
                         for (const forageable of biome.constructor.forageables) {
                             const div = list.create("div", {
                                 class: "forageable",
-                                "data-tooltip": forageable.name.case(Text.case.title).get(2),
+                                "data-tooltip": `${forageable.name.case(Text.case.title).get(2)} (${forageable.description.case(Text.case.sentence).get()})`,
                             }, { end: true });
                             div.create("img", {
                                 src: forageable.sprite,
@@ -189,10 +189,10 @@ export const Pages = Object.freeze({
                                                 const price = item.sell_price.positive * q;
                                                 game.sell(price);
 
-                                                Notification.info(`Foraged ${q} ${itemName} for ${format_number(price)} coins`);
+                                                Notification.side(`Foraged ${q} ${itemName} for <div class="coins">${format_number(price)}</div>`);
                                             } else {
                                                 game.user.inventory.add(define(item, {quantity: q }));
-                                                Notification.info(`Foraged ${q} ${itemName}`);
+                                                Notification.side(`Foraged ${q} ${itemName}`);
                                             }
 
                                             return false; // remove forageable from the biome

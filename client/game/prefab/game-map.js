@@ -87,6 +87,7 @@ export default class GameMap extends Prefab {
                 game.user.inventory.add(biome);
             }
 
+            TickEvent.connect(biome); // biome will update on tick
             DayChangeEvent.connect(biome); // biome will generate forageables on day change
             map[y * size + x] = biome;
         }
