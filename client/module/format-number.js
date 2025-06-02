@@ -24,9 +24,7 @@ export default function format_number(n) {
 export function parse_formatted_number(str) {
     if (typeof str !== "string") throw new TypeError("format_number: Argument must be a string.");
 
-    const suffix = str.match(/[A-z]+$/)[0];
-    if (!suffix)
-        throw new Error("format_number: Invalid format.");
+    const suffix = str.match(/[A-z]+$/)?.[0] || "";
     if (!abbreviations.includes(suffix))
         throw new Error(`format_number: Unknown suffix "${suffix}".`);
 
