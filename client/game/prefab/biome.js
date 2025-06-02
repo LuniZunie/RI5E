@@ -1,4 +1,5 @@
 import linker from "../linker.js";
+import Time from "../time.js";
 
 import "../../module/object.js";
 import Climate from "../../module/climate.js";
@@ -7,7 +8,7 @@ import Text from "../../module/text.js";
 import Variable from "../../module/variable.js";
 
 import Prefab from "./prefab.js";
-import {
+import Forageable, {
     Grass,
     Clover,
     Dandelion,
@@ -43,14 +44,55 @@ export default class Biome extends Prefab {
     climate;
     distance;
     locked = true;
+    forageables = [];
 
     static format = {
+        ...Prefab.format,
         x: { required: true, test: v => Number.isInteger(v) },
         y: { required: true, test: v => Number.isInteger(v) },
         climate: { required: true, test: v => Object.match(v, Climate.format) },
         distance: { required: true, test: v => Number.isFinite(v) && v >= 0 },
-        locked: { required: false, test: v => typeof v === "boolean" }
+        locked: { required: false, test: v => typeof v === "boolean" },
+        forageables: { required: false, test: v => Array.isArray(v) && v.every(f => f instanceof Forageable || Object.match(f.data, Forageable.format)) },
     };
+
+    capture(game, event) {
+        switch (event.id) {
+            case "prefab.game_event.day_change": {
+                const target = this.constructor.forageables;
+                if (target.length === 0) return;
+
+                const forageables = this.forageables;
+                if (forageables.length === target.length) return;
+
+                const temp = [];
+                let changed = false;
+                for (const forageable of target) {
+                    const exists = forageables.find(f => f.constructor.id === forageable.id);
+                    if (exists) {
+                        if (
+                            (exists.constructor.season & Time.Month[Time.getMonth(exists.grown)]) &&
+                            (exists.constructor.season & Time.Month[Time.getMonth()])
+                        )
+                            temp.push(exists);
+                        else
+                            changed = true; // existing forageable is not in season, remove it
+                        continue;
+                    }
+
+                    // Add a new forageable to the biome
+                    const newForageable = new forageable();
+                    if (newForageable.grown > 0) {
+                        temp.push(newForageable);
+                        changed = true; // new forageable is in season
+                    }
+                }
+                this.forageables = temp;
+                if (changed)
+                    game.user.change(this);
+            } break;
+        }
+    }
 };
 linker.link(Biome);
 

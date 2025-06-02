@@ -21,6 +21,7 @@ export default class Page {
         view.qs("div.top-bar>div.tabs").select(`span.tab[data-page="${this.#name}"]`);
 
         const page = view.qs("div.page");
+        page.qsa("*[data-tooltip]").forEach(el => el.onmouseout?.());
         page.dataset.page = this.#name;
         if (typeof this.#html === "function") {
             page.innerHTML = "";
@@ -91,6 +92,7 @@ export const Pages = Object.freeze({
 
                     const biome = map.get(x, y);
 
+                    panel.qsa("*[data-tooltip]").forEach(el => el.onmouseout?.());
                     panel.innerHTML = `
                         <div class="title auto-scroll"></div>
                         <div class="description auto-scroll"></div>
@@ -114,6 +116,7 @@ export const Pages = Object.freeze({
                             div.create("img", {
                                 src: forageable.sprite,
                                 alt: forageable.name.case(Text.case.title).get(2),
+                                draggable: false,
                             }, { end: true });
                         }
                     }
@@ -185,6 +188,7 @@ export const Pages = Object.freeze({
             switch (e.key) {
                 case "Escape": {
                     display.qsa("div.biome.selected").forEach(el => el.classList.remove("selected"));
+                    panel.qsa("*[data-tooltip]").forEach(el => el.onmouseout?.());
                     panel.classList.add("hidden");
                     panel.dataset.position = "";
                 } break;

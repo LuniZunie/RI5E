@@ -17,6 +17,21 @@ export default class Forageable extends Prefab {
     static time = NaN;
 
     static drop = class extends Drop {};
+
+    grown = 0;
+
+    static format = {
+        ...Prefab.format,
+        grown: { required: true, test: v => Number.isInteger(v) && v >= 0 },
+    };
+
+    constructor() {
+        super();
+        const grown = Time.now + this.constructor.time.positive;
+        if (!(this.constructor.season & Time.Month[Time.getMonth(grown)]))
+            return;
+        this.grown = grown;
+    }
 };
 linker.link(Forageable);
 

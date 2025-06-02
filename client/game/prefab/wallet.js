@@ -18,6 +18,7 @@ export default class Wallet extends Prefab {
     };
 
     static format = {
+        ...Prefab.format,
         balance: { required: true, test: v => typeof v === "number" && v >= 0 },
     };
 };

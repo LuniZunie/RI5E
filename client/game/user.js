@@ -2,6 +2,8 @@ import ID_TABLE from "./id-table.js";
 
 import Text from "../module/text.js";
 
+import Inventory from "./function/inventory.js";
+
 import Prefab from "./prefab/prefab.js";
 
 export default class User {
@@ -12,8 +14,16 @@ export default class User {
     #avatar;
     #auth_service;
 
+    inventory = new Inventory();
+
     #table;
-    #inventory = new Set();
+    #inventory = new Map();
+
+    #save = {
+        added: new Set(),
+        changed: new Set(),
+        removed: new Set(),
+    };
 
     constructor({ id, email, name, username, avatar, auth_service }) {
         this.#id = id;
@@ -40,7 +50,7 @@ export default class User {
     import(data) {
         try {
             this.#is_valid_user_data(data);
-            data.inventory?.forEach?.(item => {
+            Object.entries(data?.inventory || {}).forEach(([ id, item ]) => {
                 if (typeof item !== "object" || item === null || !item.id || !this.#table.has(item.id))
                     throw new TypeError(`Invalid item data`);
 
@@ -49,7 +59,7 @@ export default class User {
                 try {
                     instance.import(item.data);
                 } catch (err) { throw new Error(`${item.id}: ${err.message}`); }
-                this.#inventory.add(instance);
+                this.#inventory.set(id, instance);
             });
         } catch (err) {
             console.error("Failed to import item:", err);
@@ -59,14 +69,27 @@ export default class User {
         return true;
     }
     export() {
-        const o = { inventory: [] };
-        this.#inventory.forEach(item => {
+        const o = { added: [], changed: [], removed: [] };
+        this.#save.added.forEach(item => {
             if (!(item instanceof Prefab)) {
                 console.warn(`Item ${item.constructor.id} is not a valid Prefab instance.`);
                 return;
             }
-            o.inventory.push({ id: item.constructor.id, data: item.export() });
+            o.added.push({ id: item.id, data: { id: item.constructor.id, data: item.export() } });
         });
+        this.#save.changed.forEach(item => {
+            if (!(item instanceof Prefab)) {
+                console.warn(`Item ${item.constructor.id} is not a valid Prefab instance.`);
+                return;
+            }
+            o.changed.push({ id: item.id, data: { id: item.constructor.id, data: item.export() } });
+        });
+        this.#save.removed.forEach(id => o.removed.push(id));
+
+        this.#save.added.clear(); // clear after export
+        this.#save.changed.clear(); // clear after export
+        this.#save.removed.clear(); // clear after export
+
         return o;
     }
 
@@ -78,7 +101,10 @@ export default class User {
         if (!this.#table.has(constructor.id))
             throw new Error(`Unknown item type: ${constructor.id}`);
 
-        this.#inventory.add(item);
+        this.#inventory.set(item.id, item);
+        this.#save.added.add(item);
+        if (this.#save.removed.has(item.id))
+            this.#save.removed.delete(item.id); // remove from removed if it was removed in this session
         return this.#inventory.size; // return new inventory size
     }
     find(item_class, properties = {}) {
@@ -92,14 +118,29 @@ export default class User {
         });
         return A;
     }
+    change(item) {
+        if (!(item instanceof Prefab))
+            throw new TypeError("Item must be an instance of Prefab.");
+
+        if (!this.#inventory.has(item.id))
+            throw new Error("Item not found in inventory.");
+
+        this.#save.changed.add(item);
+        return this.#inventory.get(item.id); // return the item itself
+    }
     remove(item) {
         if (!(item instanceof Prefab))
             throw new TypeError("Item must be an instance of Prefab.");
 
-        if (!this.#inventory.has(item))
+        if (!this.#inventory.has(item.id))
             throw new Error("Item not found in inventory.");
 
-        this.#inventory.delete(item);
+        this.#inventory.delete(item.id);
+        this.#save.removed.add(item.id);
+        if (this.#save.added.has(item))
+            this.#save.added.delete(item); // remove from added if it was added in this session
+        if (this.#save.changed.has(item))
+            this.#save.changed.delete(item); // remove from changed if it was changed in this session
         return this.#inventory.size; // return new inventory size
     }
 };

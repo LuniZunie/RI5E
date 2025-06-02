@@ -1,4 +1,5 @@
 import bin from "../module/bin.js";
+import Game from "./game.js";
 export default class Time {
     static #ticks_per_second = 20;
     static #seconds_per_day = 10;
@@ -81,6 +82,25 @@ export default class Time {
     static get now() {
         const elapsed = Date.now() - Time.#time.when;
         return Time.#time.value + elapsed;
+    }
+
+    static getDay(tick = Game.tick) {
+        return Math.floor(tick / Time.day(1)) % (Time.month(1) / Time.day(1)) + 1;
+    }
+    static getWeek(tick = Game.tick) {
+        return Math.floor(tick / Time.week(1)) % (Time.month(1) / Time.week(1)) + 1;
+    }
+    static getMonth(tick = Game.tick) {
+        return Time.Month.order[Math.floor(tick / Time.month(1)) % Time.Month.order.length];
+    }
+    static getSeason(tick = Game.tick) {
+        return Time.Season.order[Math.floor(tick / Time.season(1)) % Time.Season.order.length];
+    }
+    static getSemester(tick = Game.tick) {
+        return Time.Semester.order[Math.floor(tick / Time.semester(1)) % Time.Semester.order.length];
+    }
+    static getYear(tick = Game.tick) {
+        return Math.floor(tick / Time.year(1)) + 1;
     }
 }
 Time.sync_time();

@@ -1,0 +1,4 @@
+2025-06-02 14:44:09 ERROR    post_user_data   -                Failed to parse existing user data: "undefined" is not valid JSON
+2025-06-02 14:44:09 ERROR    post_user_data   -                Failed to write file server/db/users/dev.github.1jz734.txt: Cannot set headers after they are sent to the client
+2025-06-02 14:44:28 ERROR    post_user_data   -                Failed to parse existing user data: "undefined" is not valid JSON
+2025-06-02 14:44:28 ERROR    post_user_data   -                Failed to write file server/db/users/dev.github.1jz734.txt: Cannot set headers after they are sent to the client

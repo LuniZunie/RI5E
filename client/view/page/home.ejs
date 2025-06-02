@@ -76,7 +76,7 @@
                             } while (el && el !== document.body);
 
                             if (el?.dataset?.tooltip) {
-                                document.body.querySelectorAll("div.tooltip").forEach(tooltip => tooltip.remove());
+                                // document.body.querySelectorAll("div.tooltip").forEach(tooltip => tooltip.remove());
                                 const tooltip = document.body.create("div", {
                                     class: "tooltip",
                                     content: el.dataset.tooltip,
@@ -99,9 +99,10 @@
                                 tooltip.style.left = `${left}px`;
                                 tooltip.style.top = `${top}px`;
 
-                                el.addEventListener("mouseout", () => {
+                                el.onmouseout = () => {
                                     tooltip.remove();
-                                }, { once: true });
+                                    el.onmouseout = null;
+                                };
                             }
                         });
 

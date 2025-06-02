@@ -37,6 +37,7 @@ import GameEvent, {
 
     WalletChangeEvent
 } from "./prefab/game-event.js";
+import { encodeJSON, decodeJSON } from "../global/module/base64.js";
 
 export default class Game {
     static TPS = Time.TPS; // ticks per second
@@ -169,6 +170,7 @@ export default class Game {
             if (!this.#map) {
                 this.#map = new GameMap();
                 this.#user.add(this.#map);
+                this.#user.inventory.add(this.#map);
             }
             this.#map.generate(this);
         }
@@ -178,6 +180,7 @@ export default class Game {
             if (!wallet) {
                 wallet = new Wallet();
                 this.#user.add(wallet);
+                this.#user.inventory.add(wallet);
             }
 
             WalletChangeEvent.connect(wallet);
@@ -207,13 +210,14 @@ export default class Game {
         await fetch("api/user/data", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include"
+            credentials: "include",
+            cache: "no-store"
         })
             .then(response => {
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return response.json();
             })
-            .then(data => this.#user.import(data))
+            .then(data => this.#user.import(decodeJSON(data.data)))
             .catch(error => console.error("Game: Failed to load user data:", error))
             .finally(() => { this.#pause.loading = false; });
         return true;
@@ -223,11 +227,21 @@ export default class Game {
         if (Object.any(this.#pause)) return false;
         this.#pause.export = true;
 
+        const { added, changed, removed } = this.#user.export();
+        const body = {};
+        if (added.length | changed.length | removed.length) {
+            if (added.length > 0) body.added = encodeJSON(added);
+            if (changed.length > 0) body.changed = encodeJSON(changed)
+            if (removed.length > 0) body.removed = encodeJSON(removed);
+        } else
+            return true; // nothing to export
+
         await fetch("api/user/data", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify(this.#user.export())
+            body: JSON.stringify(body),
+            cache: "no-store"
         })
             .then(response => {
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -291,7 +305,10 @@ export default class Game {
         TickEvent.trigger(this);
 
         const { day, week, month, season, semester, year } = Game;
-        if (this.#cache.day !== day) DayChangeEvent.trigger(this);
+        if (this.#cache.day !== day) {
+            DayChangeEvent.trigger(this);
+            this.export(); // export user data on day change
+        }
         if (this.#cache.week !== week) WeekChangeEvent.trigger(this);
         if (this.#cache.month !== month) MonthChangeEvent.trigger(this);
         if (this.#cache.season !== season) SeasonChangeEvent.trigger(this);

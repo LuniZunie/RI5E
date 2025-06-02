@@ -1,5 +1,6 @@
 import express from "express";
 import fs from "fs";
+import path from "path";
 
 import session from "express-session";
 import passport from "passport";
@@ -9,13 +10,15 @@ import { Strategy as GitHubStrategy } from "passport-github2";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 
+import { encodeJSON, decodeJSON } from "../client/global/module/base64.js";
+
 const server = JSON.parse(fs.readFileSync("server/!server.json", "utf8"));
-const url_base = `http://${server.host}`;
+const url_base = server.production ? `https://${server.domain}` : `http://${server.host}:${server.port}`;
 
 const app = express();
 
-app.use(express.json({ limit: "1mb" })); // limit to 1mb
-app.use(express.urlencoded({ extended: true, limit: "1mb" })); // limit to 1mb
+app.use(express.json({ limit: "10mb" })); // limit to 1mb
+app.use(express.urlencoded({ extended: true, limit: "10mb" })); // limit to 1mb
 app.use(express.static("client"));
 app.set("views", "client/view");
 
@@ -37,10 +40,17 @@ passport.deserializeUser((obj, done) => done(null, obj));
 
 // strategy configuration
 // Google OAuth strategy
+function get_auth_value(object, value) {
+    if (server.production)
+        return object.production?.[value] ?? object[value];
+    else
+        return object.development?.[value] ?? object[value];
+}
+
 passport.use(new GoogleStrategy({
-    clientID: server.auth.in.google.id,
-    clientSecret: server.auth.in.google.secret,
-    callbackURL: `${url_base}${server.auth.in.google.callback}`
+    clientID: get_auth_value(server.auth.in.google, "id"),
+    clientSecret: get_auth_value(server.auth.in.google, "secret"),
+    callbackURL: `${url_base}${get_auth_value(server.auth.in.google, "callback")}`,
 }, (accessToken, refreshToken, profile, done) => done(null, {
     id: profile.id,
     email: profile.emails?.[0]?.value,
@@ -51,9 +61,9 @@ passport.use(new GoogleStrategy({
 })));
 // GitHub OAuth strategy
 passport.use(new GitHubStrategy({
-    clientID: server.auth.in.github.id,
-    clientSecret: server.auth.in.github.secret,
-    callbackURL: `${url_base}${server.auth.in.github.callback}`
+    clientID: get_auth_value(server.auth.in.github, "id"),
+    clientSecret: get_auth_value(server.auth.in.github, "secret"),
+    callbackURL: `${url_base}${get_auth_value(server.auth.in.github, "callback")}`,
 }, (accessToken, refreshToken, profile, done) => done(null, {
     id: profile.id,
     email: profile.emails?.[0]?.value,
@@ -63,6 +73,26 @@ passport.use(new GitHubStrategy({
     auth_service: "GitHub",
 })));
 
+// logging
+class Logger {
+    static log(type, source, secondSource = "", message) {
+        secondSource ||= "";
+        const [ date, time ] = new Date().toISOString().split("T");
+        const path = `server/logs/${date}.log`;
+
+        const field = (len, msg) => (msg.slice(0, len) || "-").padEnd(len, " ");
+
+        const logMessage = `${date} ${time.slice(0, 8)} ${field(8, type)} ${field(16, source)} ${field(16, secondSource)} ${message}\n`;
+        // append log synchronously
+        try {
+            fs.appendFileSync(path, logMessage, "utf8");
+        } catch (err) {
+            console.error(`Failed to write log: ${err.message}`);
+        }
+    }
+}
+
+
 // Routes
 function handle_auth(req, res) {
     const token = jwt.sign(req.user, server.jwt.secret, { expiresIn: server.auth.expiration });
@@ -70,12 +100,18 @@ function handle_auth(req, res) {
     res.redirect(server.auth.in.success);
 }
 // Google auth routes
-app.get(server.auth.in.google.route, passport.authenticate("google", { scope: server.auth.in.google.scope }));
-app.get(server.auth.in.google.callback, passport.authenticate("google", { session: false, failureRedirect: server.auth.in.failure }), handle_auth);
+app.get(server.auth.in.google.route, passport.authenticate("google", { scope: get_auth_value(server.auth.in.google, "scope") }));
+app.get(server.auth.in.google.callback, passport.authenticate("google", {
+    session: false,
+    failureRedirect: get_auth_value(server.auth.in, "failure")
+}), handle_auth);
 
 // GitHub auth routes
-app.get(server.auth.in.github.route, passport.authenticate("github", { scope: server.auth.in.github.scope }));
-app.get(server.auth.in.github.callback, passport.authenticate("github", { session: false, failureRedirect: server.auth.in.failure }), handle_auth);
+app.get(server.auth.in.github.route, passport.authenticate("github", { scope: get_auth_value(server.auth.in.github, "scope") }));
+app.get(server.auth.in.github.callback, passport.authenticate("github", {
+    session: false,
+    failureRedirect: get_auth_value(server.auth.in, "failure")
+}), handle_auth);
 
 // lookup
 app.get("/api/user", (req, res) => {
@@ -96,15 +132,24 @@ app.get("/api/sync", (req, res) => {
     res.status(200).json({
         time: Date.now(),
         server: {
-            host: server.host,
-            port: server.port,
+            production: server.production,
             url: url_base
         }
     });
 });
 
 // user data
-async function reador(file, encoding, fallback) {
+async function recursive_write(file, data, encoding = "utf8", source) {
+    const dir = path.dirname(file);
+    try {
+        await fs.promises.mkdir(dir, { recursive: true });
+        await fs.promises.writeFile(file, data, encoding);
+    } catch (err) {
+        Logger.log("ERROR", "recursive_write", source, `Failed to write file ${file}: ${err.message}`);
+        throw new Error("Internal server error");
+    }
+}
+async function read_or(file, encoding, fallback, source) {
     let resolve, reject;
     const promise = new Promise((res, rej) => ([ resolve, reject ] = [ res, rej ]));
     try {
@@ -112,22 +157,24 @@ async function reador(file, encoding, fallback) {
         fs.promises.readFile(file, encoding)
             .then(data => resolve({ status: 200, data }))
             .catch(err => {
-                console.error("Error reading file:", err);
+                Logger.log("ERROR", "read_or", source, `Failed to read file ${file}: ${err.message}`);
                 reject({ status: 500, error: "Internal server error" });
             });
     } catch (err) {
         if (err.code === "ENOENT") {
             if (fallback) {
-                fs.promises.writeFile(file, fallback, encoding)
+                recursive_write(file, fallback, encoding, "read_or")
                     .then(() => resolve({ status: 200, data: fallback }))
                     .catch(err => {
-                        console.error("Error creating file:", err);
+                        Logger.log("ERROR", "read_or", source, `Failed to write fallback file ${file}: ${err.message}`);
                         reject({ status: 500, error: "Internal server error" });
                     });
-            } else
+            } else {
+                Logger.log("WARN", "read_or", source, `File not found: ${file}`);
                 reject({ status: 404, error: "File not found" });
+            }
         } else {
-            console.error("Error accessing file:", err);
+            Logger.log("ERROR", "read_or", source, `Failed to access file ${file}: ${err.message}`);
             reject({ status: 500, error: "Internal server error" });
         }
     }
@@ -135,7 +182,8 @@ async function reador(file, encoding, fallback) {
 }
 
 function get_file_path(user) {
-    return `server/db/users/${user.auth_service.toLowerCase()}.${Number(user.id).toString(36)}.json`;
+    let prefix = server.production ? "" : "dev.";
+    return `server/db/users/${prefix}${user.auth_service.toLowerCase()}.${Number(user.id).toString(36)}.json`;
 }
 function is_valid_user_data(data) { // TODO
     if (typeof data !== "object" || data === null) throw new TypeError("Invalid user data, must be an object");
@@ -144,6 +192,7 @@ function is_valid_user_data(data) { // TODO
 
 // get
 app.get("/api/user/data", async (req, res) => { // all asynchronous to allow for future expansion
+    res.set("Cache-Control", "no-store"); // ensure no caching
     const token = req.cookies.token;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
@@ -151,13 +200,14 @@ app.get("/api/user/data", async (req, res) => { // all asynchronous to allow for
         const user = jwt.verify(token, server.jwt.secret);
         const file = get_file_path(user);
 
-        reador(file, "utf8", "{}")
-            .then(({ status, data }) => res.status(status).json(JSON.parse(data)))
+        read_or(file, "utf8", "{}", "get_user_data")
+            .then(({ status, data }) => res.status(status).json({ data: encodeJSON(JSON.parse(data)) }))
             .catch(({ status, error }) => res.status(status).json({ error }));
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 });
 // post
 app.post("/api/user/data", async (req, res) => {
+    res.set("Cache-Control", "no-store"); // ensure no caching
     const token = req.cookies.token;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
@@ -169,28 +219,97 @@ app.post("/api/user/data", async (req, res) => {
             await fs.promises.access(file, fs.constants.W_OK);
         } catch (err) {
             if (err.code !== "ENOENT") {
-                console.error("Error accessing user data file:", err);
+                Logger.log("ERROR", "post_user_data", null, `Failed to access file ${file}: ${err.message}`);
                 return res.status(500).json({ error: "Internal server error" });
             }
         } finally {
             try {
-                is_valid_user_data(req.body);
+                // is_valid_user_data(req.body);
             } catch (e) {
-                console.error("Invalid user data:", e);
+                Logger.log("WARN", "post_user_data", null, `Invalid user data: ${e.message}`);
                 return res.status(400).json({ error: "Request failed" });
             }
 
-            fs.promises.writeFile(file, JSON.stringify(req.body, null, 2), "utf8")
-                .then(() => res.status(200).json({ message: "User data updated successfully" }))
+            read_or(file, "utf8", "{}", "post_user_data")
+                .then(({ status, data }) => {
+                    let userData;
+                    try {
+                        userData = JSON.parse(data);
+                    } catch (e) {
+                        Logger.log("ERROR", "post_user_data", null, `Failed to parse existing user data: ${e.message}`);
+                        return res.status(500).json({ error: "Internal server error" });
+                    }
+
+                    const inventory = userData.inventory || {};
+                    let { added, changed, removed } = req.body;
+
+                    if (added) {
+                        added = decodeJSON(added);
+                        if (!Array.isArray(added)) {
+                            Logger.log("WARN", "post_user_data", null, "Invalid added data, expected array");
+                            return res.status(400).json({ error: "Invalid request data" });
+                        }
+                        added.forEach(({ id, data: item }) => {
+                            if (typeof item !== "object") {
+                                Logger.log("WARN", "post_user_data", null, `Invalid item in added: ${JSON.stringify(item)}`);
+                                return res.status(400).json({ error: "Invalid request data" });
+                            }
+                            inventory[id] = item;
+                        });
+                    }
+                    if (changed) {
+                        changed = decodeJSON(changed);
+                        if (!Array.isArray(changed)) {
+                            Logger.log("WARN", "post_user_data", null, "Invalid changed data, expected array");
+                            return res.status(400).json({ error: "Invalid request data" });
+                        }
+                        changed.forEach(({ id, data: item }) => {
+                            if (typeof item !== "object") {
+                                Logger.log("WARN", "post_user_data", null, `Invalid item in changed: ${JSON.stringify(item)}`);
+                                return res.status(400).json({ error: "Invalid request data" });
+                            }
+                            if (!inventory[id]) {
+                                Logger.log("WARN", "post_user_data", null, `Item to change not found in inventory: ${id}`);
+                                return res.status(400).json({ error: "Invalid request data" });
+                            }
+                            inventory[id] = item;
+                        });
+                    }
+                    if (removed) {
+                        removed = decodeJSON(removed);
+                        if (!Array.isArray(removed)) {
+                            Logger.log("WARN", "post_user_data", null, "Invalid removed data, expected array");
+                            return res.status(400).json({ error: "Invalid request data" });
+                        }
+                        removed.forEach(id => {
+                            if (typeof id !== "string") {
+                                Logger.log("WARN", "post_user_data", null, `Invalid item in removed: ${id}`);
+                                return res.status(400).json({ error: "Invalid request data" });
+                            }
+                            delete inventory[id];
+                        });
+                    }
+
+                    return recursive_write(file, JSON.stringify({ inventory: inventory }, null, 2), "utf8", "post_user_data");
+                })
+                .then(() => res.status(200).json({ message: "User data saved successfully" }))
                 .catch(err => {
-                    console.error("Error writing user data file:", err);
+                    Logger.log("ERROR", "post_user_data", null, `Failed to write file ${file}: ${err.message}`);
                     res.status(500).json({ error: "Internal server error" });
                 });
+
+            /* recursive_write(file, JSON.stringify(req.body, null, 2), "utf8", "post_user_data")
+                .then(() => res.status(200).json({ message: "User data saved successfully" }))
+                .catch(err => {
+                    Logger.log("ERROR", "post_user_data", null, `Failed to write file ${file}: ${err.message}`);
+                    res.status(500).json({ error: "Internal server error" });
+                }); */
         }
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 });
 // delete
 app.delete("/api/user/data", async (req, res) => {
+    res.set("Cache-Control", "no-store"); // ensure no caching
     const token = req.cookies.token;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
@@ -204,7 +323,7 @@ app.delete("/api/user/data", async (req, res) => {
             res.clearCookie("token");
             res.status(200).json({ message: "User deleted successfully" });
         } catch (err) {
-            console.error("Error deleting user data file:", err);
+            Logger.log("ERROR", "delete_user_data", null, `Failed to delete file ${file}: ${err.message}`);
             res.status(500).json({ error: "Internal server error" });
         }
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
@@ -238,6 +357,6 @@ app.use((req, res) => {
     else res.status(404).send("404 Not Found");
 });
 
-app.listen(server.port, server.listen, () => {
+app.listen(server.port, server.host, () => {
     console.log(`Server running at ${url_base}/`)
 });

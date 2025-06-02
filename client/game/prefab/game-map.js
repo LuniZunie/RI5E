@@ -10,11 +10,23 @@ import UUID from "../../module/uuid.js";
 
 import Prefab from "./prefab.js";
 import Biome, { TemperateGrassland, Water } from "./biome.js";
+import GameEvent, {
+    TickEvent,
+
+    DayChangeEvent,
+    WeekChangeEvent,
+    MonthChangeEvent,
+    SeasonChangeEvent,
+    SemesterChangeEvent,
+    YearChangeEvent,
+
+    WalletChangeEvent
+} from "./game-event.js";
 
 export default class GameMap extends Prefab {
     static #size = 6;
 
-    static id = "prefab.map";
+    static id = "prefab.game_map";
     static name = new Text("map");
     static description = new Text("The game map of the world.").plural(false);
 
@@ -22,6 +34,7 @@ export default class GameMap extends Prefab {
     map = new DimensionMap(2 ** GameMap.#size, 2 ** GameMap.#size).offset("center", "center");
 
     static format = {
+        ...Prefab.format,
         seed: { required: true, test: v => typeof v === "string" && v.length > 0 },
     };
 
@@ -71,6 +84,7 @@ export default class GameMap extends Prefab {
                 game.user.add(biome);
             }
 
+            DayChangeEvent.connect(biome); // biome will generate forageables on day change
             map[y * size + x] = biome;
         }
         this.map.set(map);
