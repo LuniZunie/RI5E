@@ -28,6 +28,13 @@ export function parse_formatted_number(str) {
     if (!abbreviations.includes(suffix))
         throw new Error(`format_number: Unknown suffix "${suffix}".`);
 
+    if (suffix === "") {
+        const num = parseFloat(str);
+        if (isNaN(num))
+            throw new Error("format_number: Invalid number format.");
+        return num;
+    }
+
     const num = parseFloat(str.slice(0, -suffix.length));
     if (isNaN(num))
         throw new Error("format_number: Invalid number format.");
