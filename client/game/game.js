@@ -117,15 +117,32 @@ export default class Game {
         let resolve;
         const promise = new Promise(res => resolve = res);
 
-        this.#socket = new WebSocket(`${window.location.protocol.replace("http", "ws")}//${window.location.host}`);
-
         let saveHash = "";
-        this.#socket.addEventListener("message", event => {
-            if (event.data.startsWith("hash:")) {
-                saveHash = event.data.slice(5);
-                resolve();
-            }
-        });
+        try {
+            // this.#socket = new WebSocket(`${window.location.protocol.replace("http", "ws")}//${window.location.host}`);
+            this.#socket.addEventListener("message", event => {
+                if (event.data.startsWith("hash:")) {
+                    saveHash = event.data.slice(5);
+                    resolve();
+                }
+            });
+        } catch (error) {
+            fetch("api/save", {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                cache: "no-store"
+            })
+                .then(({ hash }) => {
+                    if (hash) {
+                        saveHash = hash;
+                        resolve();
+                    } else
+                        throw new Error("No save hash found.");
+                })
+                .catch(resolve);
+
+        }
 
         await promise;
         this.#saveHash = saveHash || "";
@@ -187,6 +204,8 @@ export default class Game {
             const db = indexedDB.open("RI5E", 1);
 
             return new Promise((resolve, reject) => {
+                if (!hash) reject();
+
                 db.onerror = () => reject(db.error);
                 db.onupgradeneeded = () => {
                     const res = db.result;

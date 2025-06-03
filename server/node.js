@@ -217,6 +217,24 @@ app.get("/api/user", (req, res) => {
         res.status(200).json(user);
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 });
+app.get("/api/save", (req, res) => { // temporary endpoint for testing
+    res.set("Cache-Control", "no-store");
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    let user;
+    try {
+        user = jwt.verify(token, server_config.jwt.secret);
+    } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
+
+    const file = get_file_path(user, "saves", ".txt");
+    read_or(file, "utf8", "", "get_user_save")
+        .then(({ status, data }) => res.status(status).send({ hash: data }))
+        .catch(({ status, error }) => {
+            Logger.log("ERROR", "get_user_save", user.id, `Failed to read save file ${file}: ${error}`);
+            res.status(status).json({ error });
+        });
+});
 
 app.get("/api/sync", (req, res) => {
     res.set("Cache-Control", "no-store");
