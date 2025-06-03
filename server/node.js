@@ -208,7 +208,7 @@ async function read_or(file, encoding, fallback, source) {
     });
 
     if (server_config.production) {
-        server.listen(433, server_config.host, () => {
+        server.listen(433, () => {
             console.log(`WebSocket server running at ${url_base.replace("http", "ws")}/`);
         });
     } else {
