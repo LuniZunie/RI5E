@@ -42,8 +42,8 @@ const app = express();
 
 const server = server_config.production ?
     https.createServer({
-        cert: fs.readFileSync(`etc/letsencrypt/live/${server_config.domain}/fullchain.pem`),
-        key: fs.readFileSync(`etc/letsencrypt/live/${server_config.domain}/privkey.pem`),
+        cert: fs.readFileSync(`/etc/letsencrypt/live/${server_config.domain}/fullchain.pem`),
+        key: fs.readFileSync(`/etc/letsencrypt/live/${server_config.domain}/privkey.pem`),
     }, app) :
     http.createServer(app);
 
