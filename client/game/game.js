@@ -65,13 +65,15 @@ export default class Game {
         return Math.floor(Game.tick / Time.year(1)) + 1;
     }
 
+    #socket;
+    #saveHash;
+
     #pause = {
         import: false,
         export: false,
     };
 
     #instance;
-    #socket;
     #user = new User("0", "johndoe@example.com", "John Doe", "Anonymous", null);
 
     #map;
@@ -126,7 +128,7 @@ export default class Game {
         });
 
         await promise;
-        console.log(saveHash);
+        this.#saveHash = saveHash || "";
 
         const top_bar = this.#view.querySelector("div.top-bar");
         top_bar.querySelector("div.user-info>span.username").textContent = this.#user.username;
@@ -180,7 +182,43 @@ export default class Game {
             this.#clocks.day.capture(this, DayChangeEvent);
         }
 
-        await this.import();
+        const indexeddbPromise = new Promise(res => resolve = res);
+        (async function get_from_indexeddb(hash) {
+            const db = indexedDB.open("RI5E", 1);
+
+            return new Promise((resolve, reject) => {
+                db.onerror = () => reject(db.error);
+                db.onupgradeneeded = () => {
+                    const res = db.result;
+                    if (!res.objectStoreNames.contains("inventory"))
+                        res.createObjectStore("inventory");
+                };
+                db.onsuccess = () => {
+                    const res = db.result;
+                    const transaction = res.transaction("inventory", "readwrite");
+                    const store = transaction.objectStore("inventory");
+
+                    const get = store.get(hash);
+                    get.onsuccess = () => resolve(get.result || {});
+                    get.onerror = () => reject(get.error);
+
+                    transaction.oncomplete = () => res.close();
+                };
+            });
+        })(hash || this.#saveHash)
+            .then(data => {
+                if (data) {
+                    this.#user.inventory.import(data);
+                    resolve(true);
+                } else
+                    throw new Error("No user data found in IndexedDB.");
+            })
+            .catch(async () => {
+                await this.import(); // fallback to server import
+                resolve(true);
+            });
+
+        await indexeddbPromise;
 
         { // game map
             const id = this.#user.inventory.findByType(GameMap).values().next().value;
@@ -276,6 +314,12 @@ export default class Game {
                         throw new Error(response.statusText);
                 }
                 return response.json();
+            })
+            .then(data => {
+                this.#saveHash = data?.hash || this.#saveHash;
+                this.#user.inventory.indexeddb(this.#saveHash)
+                    .then(() => {})
+                    .catch(() => {});
             })
             .catch(error => {
                 console.error("Game: Failed to export user data:", error);

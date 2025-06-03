@@ -4,6 +4,7 @@ import ID_TABLE from "../id-table.js";
 import { create_diff } from "../../global/module/diff.js";
 
 export default class Inventory {
+    #inventory = {};
     #map;
     #lookup;
     #table;
@@ -15,6 +16,7 @@ export default class Inventory {
     #original = new Map();
 
     #reinstate = {
+        inventory: {},
         map: new Map(),
         lookup: new Map()
     };
@@ -41,6 +43,7 @@ export default class Inventory {
         if (!this.#table.has(item.constructor.id)) throw new TypeError("Item is not a valid prefab.");
         if (this.#map.has(item.id)) throw new Error("Item already exists in inventory.");
 
+        this.#inventory[id] = { construct: item.constructor.id, data: item.export() };
         this.#map.set(id, item);
 
         // id's formatted with "#" and "." as separators
@@ -77,6 +80,7 @@ export default class Inventory {
 
         fn(item);
         const after = item.export();
+        this.#inventory[id] = { construct: item.constructor.id, data: after };
         this.#map.set(id, item);
 
         if (this.#added.has(id))
@@ -91,6 +95,7 @@ export default class Inventory {
         if (!this.#table.has(item.constructor.id)) throw new TypeError("Item is not a valid prefab.");
         if (!this.#map.has(id)) throw new Error("Item not found in inventory.");
 
+        delete this.#inventory[id];
         this.#map.delete(id);
         if (this.#lookup.has(item.constructor.id)) {
             const set = this.#lookup.get(item.constructor.id);
@@ -116,6 +121,7 @@ export default class Inventory {
     }
 
     export() {
+        this.#reinstate.inventory = structuredClone(this.#inventory);
         this.#reinstate.map = new Map(this.#map);
         this.#reinstate.lookup = new Map(this.#lookup);
 
@@ -183,6 +189,7 @@ export default class Inventory {
     }
 
     reinstate() {
+        this.#inventory = structuredClone(this.#reinstate.inventory);
         this.#map = new Map(this.#reinstate.map);
         this.#lookup = new Map(this.#reinstate.lookup);
         this.#added.clear();
@@ -190,7 +197,36 @@ export default class Inventory {
         this.#removed.clear();
         this.#original.clear();
 
+        this.#reinstate.inventory = {};
         this.#reinstate.map.clear();
         this.#reinstate.lookup.clear();
+    }
+
+    async indexeddb(hash) {
+        const db = indexedDB.open("RI5E", 1);
+
+        return new Promise((resolve, reject) => {
+            db.onerror = () => reject(db.error);
+            db.onupgradeneeded = () => {
+                const res = db.result;
+                if (!res.objectStoreNames.contains("inventory"))
+                    res.createObjectStore("inventory");
+            };
+            db.onsuccess = () => {
+                const res = db.result;
+                const transaction = res.transaction("inventory", "readwrite");
+                const store = transaction.objectStore("inventory");
+
+                const clear = store.clear();
+                clear.onsuccess = () => {
+                    const put = store.put(this.#inventory, hash);
+                    put.onsuccess = () => resolve(true);
+                    put.onerror = () => reject(put.error);
+                };
+                clear.onerror = () => reject(clear.error);
+
+                transaction.oncomplete = () => res.close();
+            };
+        });
     }
 };

@@ -122,6 +122,47 @@ function get_file_path(user, folder = "users", suffix = ".json") {
     let prefix = server_config.production ? "" : "dev.";
     return `server/db/${folder}/${prefix}${user.auth_service.toLowerCase()}.${Number(user.id).toString(36)}${suffix}`;
 }
+async function recursive_write(file, data, encoding = "utf8", source) {
+    const dir = path.dirname(file);
+    try {
+        await fs.promises.mkdir(dir, { recursive: true });
+        await fs.promises.writeFile(file, data, encoding);
+    } catch (err) {
+        Logger.log("ERROR", "recursive_write", source, `Failed to write file ${file}: ${err.message}`);
+        throw new Error("Internal server error");
+    }
+}
+async function read_or(file, encoding, fallback, source) {
+    let resolve, reject;
+    const promise = new Promise((res, rej) => ([ resolve, reject ] = [ res, rej ]));
+    try {
+        await fs.promises.access(file, fs.constants.R_OK);
+        fs.promises.readFile(file, encoding)
+            .then(data => resolve({ status: 200, data }))
+            .catch(err => {
+                Logger.log("ERROR", "read_or", source, `Failed to read file ${file}: ${err.message}`);
+                reject({ status: 500, error: "Internal server error" });
+            });
+    } catch (err) {
+        if (err.code === "ENOENT") {
+            if (fallback !== null && fallback !== undefined) {
+                recursive_write(file, fallback, encoding, "read_or")
+                    .then(() => resolve({ status: 200, data: fallback }))
+                    .catch(err => {
+                        Logger.log("ERROR", "read_or", source, `Failed to write fallback file ${file}: ${err.message}`);
+                        reject({ status: 500, error: "Internal server error" });
+                    });
+            } else {
+                Logger.log("WARN", "read_or", source, `File not found: ${file}`);
+                reject({ status: 404, error: "File not found" });
+            }
+        } else {
+            Logger.log("ERROR", "read_or", source, `Failed to access file ${file}: ${err.message}`);
+            reject({ status: 500, error: "Internal server error" });
+        }
+    }
+    return promise;
+}
 
 (function CreateWebSocket() {
     function parseCookies(cookieHeader) {
@@ -153,7 +194,7 @@ function get_file_path(user, folder = "users", suffix = ".json") {
 
         const file = get_file_path(user, "saves", ".txt");
         read_or(file, "utf8", "", "ws_send_save")
-            .then(({ status, data }) => ws.send(data))
+            .then(({ status, data }) => ws.send(`hash:${data}`))
             .catch(({ status, error }) => {
                 Logger.log("ERROR", "ws_send_save", user.id, `Failed to read save file ${file}: ${error}`);
                 ws.close(1008, "Internal server error");
@@ -185,48 +226,6 @@ app.get("/api/sync", (req, res) => {
         }
     });
 });
-
-async function recursive_write(file, data, encoding = "utf8", source) {
-    const dir = path.dirname(file);
-    try {
-        await fs.promises.mkdir(dir, { recursive: true });
-        await fs.promises.writeFile(file, data, encoding);
-    } catch (err) {
-        Logger.log("ERROR", "recursive_write", source, `Failed to write file ${file}: ${err.message}`);
-        throw new Error("Internal server error");
-    }
-}
-async function read_or(file, encoding, fallback, source) {
-    let resolve, reject;
-    const promise = new Promise((res, rej) => ([ resolve, reject ] = [ res, rej ]));
-    try {
-        await fs.promises.access(file, fs.constants.R_OK);
-        fs.promises.readFile(file, encoding)
-            .then(data => resolve({ status: 200, data }))
-            .catch(err => {
-                Logger.log("ERROR", "read_or", source, `Failed to read file ${file}: ${err.message}`);
-                reject({ status: 500, error: "Internal server error" });
-            });
-    } catch (err) {
-        if (err.code === "ENOENT") {
-            if (fallback) {
-                recursive_write(file, fallback, encoding, "read_or")
-                    .then(() => resolve({ status: 200, data: fallback }))
-                    .catch(err => {
-                        Logger.log("ERROR", "read_or", source, `Failed to write fallback file ${file}: ${err.message}`);
-                        reject({ status: 500, error: "Internal server error" });
-                    });
-            } else {
-                Logger.log("WARN", "read_or", source, `File not found: ${file}`);
-                reject({ status: 404, error: "File not found" });
-            }
-        } else {
-            Logger.log("ERROR", "read_or", source, `Failed to access file ${file}: ${err.message}`);
-            reject({ status: 500, error: "Internal server error" });
-        }
-    }
-    return promise;
-}
 
 app.get("/api/user/data", async (req, res) => { // all asynchronous to allow for future expansion
     res.set("Cache-Control", "no-store");

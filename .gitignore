@@ -4,6 +4,7 @@
 node_modules
 dist
 server/db
+server/logs
 
 # DO NOT FUCKING DELETE THIS LINE
 \!*
