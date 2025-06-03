@@ -117,7 +117,7 @@ export default class Game {
         let resolve;
         const promise = new Promise(res => resolve = res);
 
-        this.#socket = new WebSocket(`ws://${window.location.host}`);
+        this.#socket = new WebSocket(`${window.location.protocol.replace("http", "ws")}//${window.location.host}`);
 
         let saveHash = "";
         this.#socket.addEventListener("message", event => {

@@ -40,7 +40,13 @@ const url_base = server_config.production ? `https://${server_config.domain}` : 
 
 const app = express();
 
-const server = http.createServer(app);
+const server = server_config.production ?
+    https.createServer({
+        cert: fs.readFileSync(`etc/letsencrypt/live/${server_config.domain}/fullchain.pem`),
+        key: fs.readFileSync(`etc/letsencrypt/live/${server_config.domain}/privkey.pem`),
+    }, app) :
+    http.createServer(app);
+
 const wss = new WebSocketServer({ server });
 
 app.use(express.json({ limit: "10mb" })); // limit to 1mb
