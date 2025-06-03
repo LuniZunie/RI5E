@@ -206,10 +206,6 @@ async function read_or(file, encoding, fallback, source) {
                 ws.close(1008, "Internal server error");
             });
     });
-
-    server.listen(server_config.port, server_config.host, () => {
-        console.log(`WebSocket server running at ${url_base.replace("http", "ws")}/`);
-    });
 })();
 
 app.get("/api/user", (req, res) => {
@@ -395,6 +391,6 @@ app.use((req, res) => {
     else res.status(404).send("404 Not Found");
 });
 
-app.listen(server_config.port, server_config.host, () => {
-    console.log(`Server running at ${url_base}/`)
+server.listen(server_config.port, server_config.host, () => {
+    console.log(`WebSocket server running at ${url_base.replace("http", "ws")}/`);
 });
