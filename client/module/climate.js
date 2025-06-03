@@ -19,7 +19,7 @@ export default class Climate {
         temperature: { low: "", medium: "", high: "" },
         humidity: { low: "", medium: "", high: "" },
     };
-    static noise(prng, d, a = 0.5) {
+    static noise(prng, d) {
         const size = 2 ** d;
         const map = new Array(size * size).fill(0);
 
@@ -36,26 +36,45 @@ export default class Climate {
             const step = size / scale;
             for (let y = 0; y < size; y += step)
                 for (let x = 0; x < size; x += step)
-                    add(prng.next().value ** a * m, x, y, step);
+                    add(prng.next().value * m, x, y, step);
             scale /= 2, m /= 2;
         }
 
+        let min, max;
         const smoothed = new Array(size * size).fill(0);
         for (let y = 0; y < size; y++) {
             for (let x = 0; x < size; x++) {
                 let sum = 0, count = 0;
-                for (let dy = -1; dy <= 1; dy++) {
-                    for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -2; dy <= 2; dy++) {
+                    for (let dx = -2; dx <= 2; dx++) {
                         const nx = x + dx, ny = y + dy;
                         if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
-                            const w = (dx === 0 && dy === 0) ? 1 : 0.7; // center has full weight, neighbors half
-                            sum += map[ny * size + nx] *w;
+                            let w = 1 / Math.hypot(dx, dy);
+                            if (w > 1) w = 1.25;
+                            sum += map[ny * size + nx] * w;
                             count += w;
                         }
                     }
                 }
-                smoothed[y * size + x] = Math.round(sum / count * 1e5) / 1e5; // normalize to 5 decimal places
+                const v = sum / count;
+                smoothed[y * size + x] = v;
+
+                if (min === undefined || v < min) min = v;
+                if (max === undefined || v > max) max = v;
             }
+        }
+
+        const range = max - min || 1; // avoid division by zero
+        const len = smoothed.length;
+        for (let i = 0; i < len; i++) {
+            let v = (smoothed[i] - min) / range; // normalize to [0, 1]
+
+            v = 2 * (v - 0.5); // scale to [-1, 1]
+            const ex = 0.5;
+            v = Math.sign(v) * Math.pow(Math.abs(v), ex); // apply exponential scaling
+            v = (v + 1) / 2; // scale back to [0, 1]
+
+            smoothed[i] = Math.round(v * 1e5) / 1e5; // normalize to 5 decimal places
         }
 
         return smoothed;

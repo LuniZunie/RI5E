@@ -7,40 +7,48 @@ export default class Notification {
         element.onanimationend = () => element.remove();
     }
 
-    static error(text, duration = 2500) {
-        const element = document.qs("div#game>div.ui>div.notifications").create("div", {
-            class: "notification error",
-            html: text,
+    static #create(parent, type, html, duration = 2500) {
+        const el = parent.create("div", {
+            class: "notification",
+            html,
         }, { start: true });
-        setTimeout(() => Notification.#remove(element), duration);
-    }
-    static warning(text, duration = 2500) {
-        const element = document.qs("div#game>div.ui>div.notifications").create("div", {
-            class: "notification warning",
-            html: text,
-        }, { start: true });
-        setTimeout(() => Notification.#remove(element), duration);
-    }
-    static info(text, duration = 2500) {
-        const element = document.qs("div#game>div.ui>div.notifications").create("div", {
-            class: "notification info",
-            html: text,
-        }, { start: true });
-        setTimeout(() => Notification.#remove(element), duration);
-    }
-    static debug(text, duration = 2500) {
-        const element = document.qs("div#game>div.ui>div.notifications").create("div", {
-            class: "notification debug",
-            html: text,
-        }, { start: true });
-        setTimeout(() => Notification.#remove(element), duration);
+
+        switch (type) {
+            case Notification.ERROR: {
+                el.classList.add("error");
+            } break;
+            case Notification.WARN: {
+                el.classList.add("warn");
+            } break;
+            case Notification.INFO: {
+                el.classList.add("info");
+            } break;
+            case Notification.DEBUG: {
+                el.classList.add("debug");
+            } break;
+            case Notification.NORMAL: {
+                el.classList.add("normal");
+            } break;
+            default: {
+                throw new Error(`Unknown notification type: ${type}`);
+            } break;
+        }
+
+        setTimeout(() => Notification.#remove(el), duration);
+        return el;
     }
 
-    static side(text, duration = 2500) {
-        const element = document.qs("div#game>div.ui>div.side-notifications").create("div", {
-            class: "notification",
-            html: text,
-        }, { start: true });
-        setTimeout(() => Notification.#remove(element), duration);
+    static ERROR = Symbol("error");
+    static WARN = Symbol("warning");
+    static INFO = Symbol("info");
+    static DEBUG = Symbol("debug");
+    static NORMAL = Symbol("normal");
+
+    static top(type, html, duration = 2500) {
+        this.#create(document.qs("div#game>div.ui>div.notifications.top"), type, html, duration);
+    }
+
+    static side(type, html, duration = 2500) {
+        this.#create(document.qs("div#game>div.ui>div.notifications.side"), type, html, duration);
     }
 }

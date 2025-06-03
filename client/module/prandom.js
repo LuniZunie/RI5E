@@ -1,4 +1,4 @@
-function murmurhash3(seed) {
+export function murmurhash3(seed) {
     const len = seed.length;
     let h = 0xdeadbeef ^ len;
     for (let i = 0; i < len; i++)

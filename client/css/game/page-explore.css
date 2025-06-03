@@ -23,15 +23,26 @@ body>div#game>div.page[data-page="explore"] {
 
         &>div.biome {
             cursor: pointer;
-            border: 1px solid #2222;
+
+            width: calc(100% - 2px);
+                height: calc(100% - 2px);
+
+            border: 1px solid #0002;
 
             &.locked {
-                border: 1px solid #222;
-                opacity: 0.5;
+                border: 1px solid #000;
+                filter: grayscale(0.75) blur(2px);
+
+                width: calc(100% - 2px);
+                height: calc(100% - 2px);
+
+                &.could-purchase {
+                    filter: grayscale(0.5);
+                }
             }
             &.selected {
-                z-index: 1;
-                scale: 1.5;
+                z-index: 2;
+                scale: 1.35;
                 border: 1px solid #80f;
                 opacity: 1;
                 box-shadow: 0 0 10px 2px #80f8;
@@ -151,7 +162,7 @@ body>div#game>div.page[data-page="explore"] {
                 right: 1vmin;
 
                 &::before {
-                    background-image: url(/game/assets/coin.svg);
+                    background: url(/game/assets/coin.svg) no-repeat center center / cover;
                 }
             }
             &.forage {
@@ -159,7 +170,7 @@ body>div#game>div.page[data-page="explore"] {
                 width: calc(50% - 4vmin);
 
                 &::before {
-                    background-image: url(/game/assets/foraging.svg);
+                    background: url(/game/assets/tool/foraging.svg) no-repeat center center / cover;
                 }
             }
             &.fish {
@@ -167,7 +178,7 @@ body>div#game>div.page[data-page="explore"] {
                 width: calc(50% - 4vmin);
 
                 &::before {
-                    background-image: url(/game/assets/fishing.svg);
+                    background: url(/game/assets/tool/fishing.svg) no-repeat center center / cover;
                 }
             }
 

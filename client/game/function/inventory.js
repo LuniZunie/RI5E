@@ -14,6 +14,11 @@ export default class Inventory {
 
     #original = new Map();
 
+    #reinstate = {
+        map: new Map(),
+        lookup: new Map()
+    };
+
     #BUILD = ID_TABLE.build();
 
     constructor() {
@@ -111,6 +116,9 @@ export default class Inventory {
     }
 
     export() {
+        this.#reinstate.map = new Map(this.#map);
+        this.#reinstate.lookup = new Map(this.#lookup);
+
         const out = {
             added: [],
             changed: [],
@@ -150,15 +158,17 @@ export default class Inventory {
     import(data) {
         try {
             Object.values(data || {}).forEach(datum => {
-                if (typeof datum !== "object" || datum === null || !datum.construct || !this.#table.has(datum.construct))
-                    throw new TypeError(`Invalid item data`);
+                if (typeof datum !== "object" || datum === null || !datum.construct || !this.#table.has(datum.construct)) {
+                    console.error(`Invalid item data.`);
+                    return; // skip invalid item data
+                }
 
                 const ItemClass = this.#table.get(datum.construct);
                 const instance = new ItemClass();
                 try {
                     instance.import(this.#BUILD, datum.data);
-                } catch (err) { throw new Error(`${datum.construct}: ${err.message}\n${JSON.stringify(datum)}`) }
-                this.#add(instance);
+                    this.#add(instance);
+                } catch (err) { console.error(`Failed to import item ${datum.construct} with ID ${datum.id}:`, err); }
             });
             return true;
         } catch (err) {
@@ -170,5 +180,17 @@ export default class Inventory {
             this.#removed.clear();
             return false;
         }
+    }
+
+    reinstate() {
+        this.#map = new Map(this.#reinstate.map);
+        this.#lookup = new Map(this.#reinstate.lookup);
+        this.#added.clear();
+        this.#changed.clear();
+        this.#removed.clear();
+        this.#original.clear();
+
+        this.#reinstate.map.clear();
+        this.#reinstate.lookup.clear();
     }
 };

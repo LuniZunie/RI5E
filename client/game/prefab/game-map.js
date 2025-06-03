@@ -9,7 +9,7 @@ import Text from "../../module/text.js";
 import UUID from "../../module/uuid.js";
 
 import Prefab from "./prefab.js";
-import Biome, { TemperateGrassland, Water } from "./biome.js";
+import Biome, { TemperateGrassland } from "./biome.js";
 import GameEvent, {
     TickEvent,
 
@@ -39,7 +39,6 @@ export default class GameMap extends Prefab {
     };
 
     generate(game) {
-        console.groupCollapsed(`GameMap: Generating map with seed ${this.seed}`);
         const Biomes = linker.goto(Biome).list(Linker.Terminus, 1);
 
         const biomes = game.user.inventory.findByType(Biome).values();
@@ -52,11 +51,12 @@ export default class GameMap extends Prefab {
         const bin_size = GameMap.#size, size = 2 ** bin_size;
 
         const prng = prandom(this.seed);
-        const noise = Object.fromEntries(Object.keys(Climate.measurements).map(k => [ k, Climate.noise(prng, bin_size, 1) ]));
+        const noise = Object.fromEntries(Object.keys(Climate.measurements).map(k => [ k, Climate.noise(prng, bin_size) ]));
         const [ cx, cy ] = [ (size - 1) / 2, (size - 1) / 2 ];
 
         const len = size ** 2;
         const map = new Array(len).fill(null);
+        let added = false;
         for (let i = 0; i < len; i++) {
             const climate_obj = {};
             for (const k of Object.keys(Climate.measurements))
@@ -66,15 +66,21 @@ export default class GameMap extends Prefab {
             const key = `${x},${y}`;
 
             const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-            const climate = define(Climate, climate_obj).combine(TemperateGrassland.climate, 1 - dist / (size / 15));
+            const climate = define(Climate, climate_obj).combine(TemperateGrassland.climate, dist < 3 ? (1 - dist / 3) : 0); // combine with TemperateGrassland climate, closer to center is more like it
 
-            const match = climate.altitude < 0.1 ?
-                Water : Biomes.map(biome => [ biome, biome.climate.compare(climate) ]).sort((a, b) => a[1] - b[1])[0][0];
+            const match = Biomes.map(biome => [ biome, biome.climate.compare(climate) ]).sort((a, b) => a[1] - b[1])[0][0];
 
             let biome = current_map[key];
             if (!biome || !(biome instanceof match && define(Climate, biome.climate).compare(climate) === 0)) { // biome not found or not matching
+                if (!added) {
+                    console.groupCollapsed(`GameMap: Generating map with seed ${this.seed}`);
+                    added = true;
+                }
+
+                let locked = true;
                 if (biome) {
                     console.warn(`GameMap: Found existing biome at ${key} but it does not match the new biome.`);
+                    locked = biome.locked; // keep the locked state of the existing biome even if it doesn't match
                     game.user.inventory.remove(biome);
                 }
                 console.log(`GameMap: Generating biome at ${key}.`);
@@ -82,7 +88,7 @@ export default class GameMap extends Prefab {
                 biome = define(match, {
                     x, y, climate,
                     distance: dist,
-                    locked: !((x === Math.floor(cx) || x === Math.ceil(cx)) && (y === Math.floor(cy) || y === Math.ceil(cy)))
+                    locked: locked && !((x === Math.floor(cx) || x === Math.ceil(cx)) && (y === Math.floor(cy) || y === Math.ceil(cy))),
                 });
                 game.user.inventory.add(biome);
             }

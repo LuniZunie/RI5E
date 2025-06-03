@@ -60,48 +60,28 @@ body>div#game>div.ui {
 
     &>div.notifications {
         position: fixed;
-        top: calc(var(--top-height) + 1vmin);
-        left: 0;
         width: 100%;
         z-index: 4;
 
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5vmin;
 
-        &>div.notification { /* fade in from top  */
-            z-index: 4;
-
-            padding: 1vmin 2vmin;
-            border-radius: 1vmin;
-
-            background: rgba(10, 10, 10, 0.7);
-            -webkit-backdrop-filter: blur(5px);
-            backdrop-filter: blur(5px);
-
-            color: #fff;
-            font-size: 1.2em;
-            text-align: center;
-
-            animation: notification-in 0.3s ease-in-out;
-            &.out { animation: notification-out 0.3s ease-in-out; }
-        }
-    }
-
-    &>div.side-notifications { /* top left corner */
-        position: fixed;
-        top: calc(var(--top-height) + 1vmin);
-        left: 1vmin;
-
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        justify-content: flex-start;
         gap: 0.5vmin;
         overflow: hidden;
 
+        &.top {
+            top: calc(var(--top-height) + 1vmin);
+            left: 0;
+            align-items: center;
+            justify-content: center;
+        }
+        &.side {
+            top: calc(var(--top-height) + 1vmin);
+            left: 1vmin;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+
         &>div.notification { /* fade in from top  */
             z-index: 4;
 
@@ -118,6 +98,11 @@ body>div#game>div.ui {
 
             animation: notification-in 0.3s ease-in-out;
             &.out { animation: notification-out 0.3s ease-in-out; }
+
+            &.error {
+                background: rgba(255, 0, 0, 0.7);
+                color: #fff;
+            }
         }
     }
 }

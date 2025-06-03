@@ -1,4 +1,5 @@
 import "../../module/html.js";
+import Prefab from "../prefab/prefab.js";
 import Climate from "../../module/climate.js";
 import define from "../../module/define.js";
 import format_number from "../../module/format-number.js";
@@ -8,21 +9,29 @@ import Notification from "./notification.js";
 
 import Time from "../time.js";
 import Wallet from "../prefab/wallet.js";
+import { WalletChangeEvent } from "../prefab/game-event.js";
 
 export default class Page {
+    static current = null;
     #name;
     #html = `
         <h1>Page Not Found</h1>
         <p>The page you are looking for does not exist.</p>
     `;
-    constructor(name, html) {
+    #options = {};
+    #cache = {};
+    constructor(name, html, options = {}) {
         this.#name = name;
         if (html) this.#html = html;
+        this.#options = options;
     }
 
     get name() { return this.#name; }
 
     draw(view, game) {
+        if (Page.current && !Object.is(Page.current, this))
+            this.#options?.onleave?.(view, game, this.#cache);
+        Page.current = this;
         view.qs("div.top-bar>div.tabs").select(`span.tab[data-page="${this.#name}"]`);
 
         const page = view.qs("div.page");
@@ -30,7 +39,7 @@ export default class Page {
         page.dataset.page = this.#name;
         if (typeof this.#html === "function") {
             page.innerHTML = "";
-            this.#html(page, game);
+            this.#html(page, game, this.#cache);
         } else page.innerHTML = this.#html;
     }
 };
@@ -40,7 +49,7 @@ export const Pages = Object.freeze({
         <h1>Welcome to the Game</h1>
         <p>Explore, play, and enjoy your time here!</p>
     `),
-    explore: new Page("explore", (page, game) => {
+    explore: new Page("explore", (page, game, cache) => {
         const display = page.create("div", {
             class: "map",
             style: { "--map-size": game.map.dimension(0) },
@@ -64,6 +73,8 @@ export const Pages = Object.freeze({
                     map.getor({ locked: true }, x, y - 1).locked
         }
 
+        const events = new Map();
+
         const [ sx, ex ] = [ map.start(0), map.end(0) ];
         const [ sy, ey ] = [ map.start(1), map.end(1) ];
         for (let y = sy; y <= ey; y++) {
@@ -75,10 +86,32 @@ export const Pages = Object.freeze({
                     "data-position": `${x},${y}`,
                 }, { end: true });
 
-                if (biome.locked) div.classList.add("locked");
+                const prefab = define(Prefab, {
+                    capture: (game, event) => {
+                        switch (event.id) {
+                            case "prefab.game_event.wallet_change": {
+                                if (!biome.locked) return; // no need to update locked biomes
+                                const cost = format_number(quote(biome));
+                                div.classList.toggle("could-purchase", game.could_pay(cost));
+                            } break;
+                        }
+                    }
+                });
+                events.set(`${x},${y}`, prefab);
+
+                if (biome.locked)
+                    div.classList.add("locked");
 
                 if (fogged(x, y)) div.classList.add("fogged");
-                else div.style.background = biome.constructor.sprite;
+                else {
+                    if (biome.locked) {
+                        WalletChangeEvent.connect(prefab);
+                        cache.connectedEvents ||= new Set();
+                        cache.connectedEvents.add(prefab);
+                    }
+
+                    div.style.background = biome.constructor.sprite;
+                }
 
                 div.addEventListener("click", e => {
                     e.stopPropagation();
@@ -88,11 +121,13 @@ export const Pages = Object.freeze({
                     const pos = div.dataset.position, [ x, y ] = pos.split(",").map(Number);
                     if (fogged(x, y) || panel.dataset.position === pos) {
                         panel.dataset.position = "";
+                        panel.dataset.tabFocus = panel.qsa("div.button.enter-focus")[0]?.dataset.tabFocus ?? "forage";
                         return panel.classList.add("hidden");
                     }
 
                     div.classList.add("selected");
                     panel.dataset.position = pos;
+                    panel.dataset.tabFocus = panel.qsa("div.button.enter-focus")[0]?.dataset.tabFocus ?? "forage";
                     display.dataset.position = pos;
 
                     const biome = map.get(x, y);
@@ -131,8 +166,8 @@ export const Pages = Object.freeze({
                     }
 
                     panel.create("div", { class: "button purchase disabled", content: "Loading..." }, { end: true });
-                    panel.create("div", { class: "button forage hidden", content: "Forage" }, { end: true });
-                    panel.create("div", { class: "button fish hidden", content: "Fish" }, { end: true });
+                    panel.create("div", { class: "button forage hidden", content: "Forage", "data-tab-focus": "forage" }, { end: true });
+                    panel.create("div", { class: "button fish hidden", content: "Fish", "data-tab-focus": "fish" }, { end: true });
 
                     const purchase = panel.qs("div.button.purchase");
                     purchase.classList.toggle("disabled", !biome.locked);
@@ -144,6 +179,12 @@ export const Pages = Object.freeze({
                         purchase.onclick = () => {
                             if (biome.locked && !fogged(x, y)) {
                                 if (game.pay(cost)) {
+                                    try {
+                                        WalletChangeEvent.disconnect(prefab);
+                                        cache.connectedEvents?.delete(prefab);
+                                        div.classList.remove("could-purchase");
+                                    } catch { }
+
                                     game.user.inventory.change(biome, b => { b.locked = false; });
                                     div.classList.remove("locked");
 
@@ -156,6 +197,15 @@ export const Pages = Object.freeze({
                                         if (neighbor) {
                                             neighbor.classList.remove("fogged");
                                             neighbor.style.background = map.get(nx, ny).constructor.sprite;
+
+                                            const neighborPrefab = events.get(`${nx},${ny}`);
+                                            if (neighborPrefab) {
+                                                WalletChangeEvent.connect(neighborPrefab);
+                                                cache.connectedEvents ||= new Set();
+                                                cache.connectedEvents.add(neighborPrefab);
+                                            }
+
+                                            neighbor.classList.toggle("could-purchase", game.could_pay(format_number(quote(map.get(nx, ny)))));
                                         }
                                     });
                                 }
@@ -170,7 +220,8 @@ export const Pages = Object.freeze({
                         const forage = panel.qs("div.button.forage");
                         forage.classList.remove("hidden");
                         forage.classList.toggle("disabled", biome.constructor.forageables.length === 0);
-                        forage.classList.add("enter-focus", "tab-focus-1");
+                        forage.classList.toggle("enter-focus", panel.dataset.tabFocus === "forage");
+                        forage.classList.add("tab-focus");
                         forage.onclick = () => {
                             if (!biome.locked) {
                                 const forageables = biome.forageables;
@@ -189,10 +240,10 @@ export const Pages = Object.freeze({
                                                 const price = item.sell_price.positive * q;
                                                 game.sell(price);
 
-                                                Notification.side(`Foraged ${q} ${itemName} for <div class="coins">${format_number(price)}</div>`);
+                                                Notification.side(Notification.NORMAL, `Foraged ${q} ${itemName} for <div class="coins">${format_number(price)}</div>`);
                                             } else {
                                                 game.user.inventory.add(define(item, {quantity: q }));
-                                                Notification.side(`Foraged ${q} ${itemName}`);
+                                                Notification.side(Notification.NORMAL, `Foraged ${q} ${itemName}`);
                                             }
 
                                             return false; // remove forageable from the biome
@@ -203,7 +254,7 @@ export const Pages = Object.freeze({
                                 });
 
                                 if (!foraged) {
-                                    Notification.warning("No forageables available at this time.");
+                                    Notification.top(Notification.WARN, "No forageables available at this time.");
                                     return;
                                 }
                             }
@@ -212,13 +263,18 @@ export const Pages = Object.freeze({
                         const fish = panel.qs("div.button.fish");
                         fish.classList.remove("hidden");
                         fish.classList.toggle("disabled", !biome.constructor.fishable);
-                        fish.classList.add("enter-focus", "tab-focus-2");
+                        fish.classList.toggle("enter-focus", panel.dataset.tabFocus === "fish");
+                        fish.classList.add("tab-focus");
                     }
 
                     panel.classList.remove("hidden");
                 });
             }
         }
+
+        cache.connectedEvents?.forEach(prefab => {
+            prefab.capture(game, WalletChangeEvent);
+        });
 
         window.onkeydown = e => {
             const move = (dx, dy) => {
@@ -266,5 +322,16 @@ export const Pages = Object.freeze({
                 } break;
             }
         };
+    }, {
+        onleave: (view, game, cache) => {
+            if (cache.connectedEvents) {
+                for (const event of cache.connectedEvents) {
+                    try {
+                        WalletChangeEvent.disconnect(event);
+                    } catch { }
+                }
+                cache.connectedEvents.clear();
+            }
+        }
     }),
 });

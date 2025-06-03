@@ -36,7 +36,7 @@
             }
         }
 
-        window.addEventListener("load", () => {
+        document.addEventListener("DOMContentLoaded", () => {
             fetch("/api/user", { credentials: "include" })
                 .then(res => {
                     if (res.ok) return res.json();
@@ -57,12 +57,22 @@
 
                         document.body.addEventListener("keydown", e => {
                             switch (e.key) {
-                                case "Enter":
-                                    document.querySelectorAll("*.enter-focus:not(.disabled)").forEach(el => {
+                                case "Enter": {
+                                    document.qsa("*.enter-focus:not(.disabled)").forEach(el => {
                                         if (getComputedStyle(el).display !== "none")
                                             el.click();
                                     });
-                                    break;
+                                } break;
+                                case "Tab": {
+                                    e.preventDefault(); // Prevent default tab behavior
+                                    const focusableElements = [ ...document.qsa("*.tab-focus") ];
+                                    if (focusableElements.length > 0) {
+                                        const currentIndex = focusableElements.findIndex(el => el.classList.contains("enter-focus"));
+                                        const nextIndex = (currentIndex + 1) % focusableElements.length;
+                                        focusableElements.forEach(el => el.classList.remove("enter-focus"));
+                                        focusableElements[nextIndex].classList.add("enter-focus");
+                                    }
+                                } break;
                             }
                         });
 
@@ -128,6 +138,9 @@
                 <span class="tab" data-page="forest">forest</span>
             </div>
             <div class="user-info">
+                <a class="bug-report" href="https://forms.gle/Fz5asWeiGbLMe8Z39" target="_blank" rel="noopener noreferrer" data-tooltip="Report a bug or suggest a feature">
+                    <img src="/game/assets/bug-report.svg" alt="Bug Report" draggable="false" />
+                </a>
                 <a class="logout" href="/logout">Logout</a>
                 <span class="username"></span>
                 <div class="avatar">
@@ -136,8 +149,8 @@
             </div>
         </div>
         <div class="ui">
-            <div class="side-notifications"></div>
-            <div class="notifications"></div>
+            <div class="notifications side"></div>
+            <div class="notifications top"></div>
             <span class="wallet"></span>
         </div>
         <div class="page"></div>

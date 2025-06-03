@@ -71,6 +71,7 @@ export default class Game {
     };
 
     #instance;
+    #socket;
     #user = new User("0", "johndoe@example.com", "John Doe", "Anonymous", null);
 
     #map;
@@ -111,6 +112,22 @@ export default class Game {
     get map() { return this.#map.map; }
 
     async init(hash) {
+        let resolve;
+        const promise = new Promise(res => resolve = res);
+
+        this.#socket = new WebSocket(`ws://${window.location.host}`);
+
+        let saveHash = "";
+        this.#socket.addEventListener("message", event => {
+            if (event.data.startsWith("hash:")) {
+                saveHash = event.data.slice(5);
+                resolve();
+            }
+        });
+
+        await promise;
+        console.log(saveHash);
+
         const top_bar = this.#view.querySelector("div.top-bar");
         top_bar.querySelector("div.user-info>span.username").textContent = this.#user.username;
         top_bar.querySelector("div.user-info>div.avatar>img").src = this.user.avatar;
@@ -214,11 +231,21 @@ export default class Game {
             cache: "no-store"
         })
             .then(response => {
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                if (!response.ok) {
+                    if (response.status === 401)
+                        window.location.href = `login?redirect=${encodeURIComponent(window.location.href)}&error=${encodeURIComponent("unauthorized")}`;
+                    else if (response.status === 404)
+                        throw new Error("Server failed to respond. Please try again later.");
+                    else
+                        throw new Error(response.statusText);
+                }
                 return response.json();
             })
             .then(data => this.#user.inventory.import(data?.inventory))
-            .catch(error => console.error("Game: Failed to load user data:", error))
+            .catch(error => {
+                console.error("Game: Failed to import user data:", error);
+                Notification.top(Notification.ERROR, `Failed to import user data: ${error.message}`);
+            })
             .finally(() => { this.#pause.loading = false; });
         return true;
     }
@@ -240,10 +267,21 @@ export default class Game {
             cache: "no-store"
         })
             .then(response => {
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                if (!response.ok) {
+                    if (response.status === 401)
+                        window.location.href = `login?redirect=${encodeURIComponent(window.location.href)}&error=${encodeURIComponent("unauthorized")}`;
+                    else if (response.status === 404)
+                        throw new Error("Server failed to respond. Please try again later.");
+                    else
+                        throw new Error(response.statusText);
+                }
                 return response.json();
             })
-            .catch(error => console.error("Game: Failed to save user data:", error))
+            .catch(error => {
+                console.error("Game: Failed to export user data:", error);
+                Notification.top(Notification.ERROR, `Failed to export user data: ${error.message}`);
+                this.#user.inventory.reinstate(); // revert inventory changes on export failure
+            })
             .finally(() => { this.#pause.export = false; });
         return true;
     }
@@ -267,13 +305,28 @@ export default class Game {
 
         const balance = parse_formatted_number(format_number(wallet.balance));
         if (balance < cost) {
-            Notification.error("Not enough funds for this purchase.");
+            Notification.top(Notification.WARN, "Not enough funds for this purchase.");
             return false;
         } else {
             this.#user.inventory.change(wallet, w => { w.balance = balance - cost; });
-            WalletChangeEvent.trigger(wallet);
+            WalletChangeEvent.trigger(this);
             return true;
         }
+    }
+    could_pay(cost) {
+        try {
+            cost = parse_formatted_number(cost);
+        } catch (e) {
+            console.error("Game: Invalid cost format:", cost, e);
+            return false;
+        }
+
+        const id = this.#user.inventory.findByType(Wallet).values().next().value;
+        const wallet = this.#user.inventory.findById(id) || null;
+        if (!wallet) return false;
+
+        const balance = parse_formatted_number(format_number(wallet.balance));
+        return balance >= cost;
     }
 
     sell(price) {
@@ -287,14 +340,13 @@ export default class Game {
         }
 
         this.#user.inventory.change(wallet, w => { w.balance += price; });
-        WalletChangeEvent.trigger(wallet);
+        WalletChangeEvent.trigger(this);
     }
 
     async #smooth_scroll(el, dist, time, callback = () => true) {
         if (dist === 0) return Promise.resolve([ 0, 0 ]); // no scrolling needed
 
         const start = el.scrollLeft, end = start + dist;
-        const step = dist / time; // pixels per millisecond
 
         let resolve;
         const promise = new Promise(res => resolve = res);

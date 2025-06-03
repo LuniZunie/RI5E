@@ -66,8 +66,15 @@ export default class Time {
     static sync_time() {
         fetch("/api/sync", { cache: "no-store" })
             .then(response => {
-                if (response.ok) return response.json();
-                throw new Error("Failed to sync time");
+                if (!response.ok) {
+                    if (response.status === 401)
+                        window.location.href = `login?redirect=${encodeURIComponent(window.location.href)}&error=${encodeURIComponent("unauthorized")}`;
+                    else if (response.status === 404)
+                        throw new Error("Server failed to respond. Please try again later.");
+                    else
+                        throw new Error(response.statusText);
+                }
+                return response.json();
             })
             .then(data => {
                 if (data.time) {
@@ -75,7 +82,10 @@ export default class Time {
                     Time.#time.when = Date.now();
                 }
             })
-            .catch(error => console.error("Time sync error:", error))
+            .catch(error => {
+                console.error("Game: Failed to sync with server:", error);
+                Notification.top(Notification.ERROR, `Failed to sync with server: ${error.message}`);
+            })
             .finally(() => setTimeout(Time.sync_time, 60 * 1000)); // resync every minute
     }
 

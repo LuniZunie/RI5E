@@ -96,8 +96,8 @@ class TemperateGrassland extends Biome {
 
     static climate = define(Climate, {
         altitude: 0.5,
-        temperature: 0.5,
-        humidity: 0.5,
+        temperature: 0.4,
+        humidity: 0.4,
     });
 
     static forageables = [ Grass, Clover, Dandelion, Blackberry, Grape, Strawberry, Apple, Cherry ];
@@ -114,7 +114,7 @@ class TropicalGrassland extends Biome {
     static climate = define(Climate, {
         altitude: 0.5,
         temperature: 0.6,
-        humidity: 0.8,
+        humidity: 0.6,
     });
 
     static forageables = [ Grass, Banana, Orange, Lemon, Lime, Pineapple, Coconut ];
@@ -129,7 +129,7 @@ class Shrubland extends Biome {
     static sprite = "#c2a662";
 
     static climate = define(Climate, {
-        altitude: 0.7,
+        altitude: 0.5,
         temperature: 0.9,
         humidity: 0.1,
     });
@@ -146,9 +146,9 @@ class Scrubland extends Biome {
     static sprite = "#b79e68";
 
     static climate = define(Climate, {
-        altitude: 0.3,
+        altitude: 0.5,
         temperature: 0.8,
-        humidity: 0.3,
+        humidity: 0.2,
     });
 
     static forageables = [ Grass, Blackberry, Grape, Orange, Lemon, Lime ];
@@ -163,9 +163,9 @@ class TemperateForest extends Biome {
     static sprite = "#4b8b3b";
 
     static climate = define(Climate, {
-        altitude: 0.5,
-        temperature: 0.6,
-        humidity: 0.3,
+        altitude: 0.7,
+        temperature: 0.4,
+        humidity: 0.7,
     });
 
     static forageables = [ Grass, Clover, Dandelion, Mushroom, Blackberry, Raspberry, Blueberry, Grape, Strawberry, Apple, Peach, Cherry ];
@@ -180,9 +180,9 @@ class MontaneForest extends Biome {
     static sprite = "#44695f";
 
     static climate = define(Climate, {
-        altitude: 1,
+        altitude: 0.9,
         temperature: 0.2,
-        humidity: 0.5,
+        humidity: 0.4,
     });
 
     static forageables = [ Grass, Clover, Dandelion, Mushroom, Blackberry, Raspberry, Blueberry, Grape, Strawberry, Apple, Orange, Peach, Lemon, Lime, Cherry ];
@@ -199,7 +199,7 @@ class SubtropicalForest extends Biome {
     static climate = define(Climate, {
         altitude: 0.4,
         temperature: 0.8,
-        humidity: 0.7,
+        humidity: 0.6,
     });
 
     static forageables = [ Grass, Mushroom, Blackberry, Raspberry, Blueberry, Grape, Strawberry, Banana, Apple, Orange, Peach, Lemon, Lime, Cherry, Pineapple, Coconut ];
@@ -214,9 +214,9 @@ class MangroveForest extends Biome {
     static sprite = "#417760";
 
     static climate = define(Climate, {
-        altitude: 0.2,
-        temperature: 0.7,
-        humidity: 0.9,
+        altitude: 0.3,
+        temperature: 0.3,
+        humidity: 0.8,
     });
 
     static forageables = [ Pineapple, Coconut ];
@@ -232,32 +232,66 @@ class TropicalRainforest extends Biome {
 
     static climate = define(Climate, {
         altitude: 0.4,
-        temperature: 0.8,
+        temperature: 0.9,
         humidity: 0.8,
-
     });
 
     static forageables = [ Grass, Mushroom, Grape, Banana, Orange, Lemon, Lime, Pineapple, Coconut ];
 };
 linker.goto(Biome).link(TropicalRainforest);
 
-class Water extends Biome {
-    static id = "prefab.biome.water";
-    static name = new Text("water");
-    static description = new Text("A body of water, such as a river, lake, or ocean.").plural(false);
+class Mudflat extends Biome {
+    static id = "prefab.biome.mudflat";
+    static name = new Text("mudflat");
+    static description = new Text("A coastal area with soft, muddy ground.").plural(false);
+
+    static sprite = "#b0a08c";
+
+    static climate = define(Climate, {
+        altitude: 0.3,
+        temperature: 0.6,
+        humidity: 0.8,
+    });
+
+    static forageables = [];
+}
+linker.goto(Biome).link(Mudflat);
+
+class ShallowWater extends Biome {
+    static id = "prefab.biome.shallow_water";
+    static name = new Text("shallow water");
+    static description = new Text("A body of shallow water.").plural(false);
 
     static sprite = "#3ca9dd";
 
     static climate = define(Climate, {
-        altitude: 0,
+        altitude: 0.2,
         temperature: 0.3,
-        humidity: 1,
+        humidity: 0.8,
     });
 
     static forageables = [];
     static fishable = true;
 };
-linker.goto(Biome).link(Water);
+linker.goto(Biome).link(ShallowWater);
+
+class DeepWater extends Biome {
+    static id = "prefab.biome.deep_water";
+    static name = new Text("deep water");
+    static description = new Text("A body of deep water.").plural(false);
+
+    static sprite = "#1e6f9c";
+
+    static climate = define(Climate, {
+        altitude: 0.1,
+        temperature: 0.1,
+        humidity: 0.9,
+    });
+
+    static forageables = [];
+    static fishable = true;
+};
+linker.goto(Biome).link(DeepWater);
 
 export {
     Biome,
@@ -270,5 +304,7 @@ export {
     SubtropicalForest,
     MangroveForest,
     TropicalRainforest,
-    Water
+    Mudflat,
+    ShallowWater,
+    DeepWater
 };
