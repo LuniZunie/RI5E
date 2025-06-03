@@ -207,15 +207,9 @@ async function read_or(file, encoding, fallback, source) {
             });
     });
 
-    if (server_config.production) {
-        server.listen(433, () => {
-            console.log(`WebSocket server running at ${url_base.replace("http", "ws")}/`);
-        });
-    } else {
-        server.listen(server_config.port, server_config.host, () => {
-            console.log(`WebSocket server running at ${url_base.replace("http", "ws")}/`);
-        });
-    }
+    server.listen(server_config.port, server_config.host, () => {
+        console.log(`WebSocket server running at ${url_base.replace("http", "ws")}/`);
+    });
 })();
 
 app.get("/api/user", (req, res) => {
