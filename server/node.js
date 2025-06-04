@@ -383,6 +383,6 @@ app.use((req, res) => {
     else res.status(404).send("404 Not Found");
 });
 
-server.listen(config.port, config.host, () => {
+app.listen(config.port, config.host, () => {
     console.log(`WebSocket server running at ${url_base.replace("http", "ws")}/`);
 });
