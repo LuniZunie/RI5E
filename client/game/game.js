@@ -119,7 +119,7 @@ export default class Game {
 
         let saveHash = "";
         try {
-            // this.#socket = new WebSocket(`${window.location.protocol.replace("http", "ws")}//${window.location.host}`);
+            this.#socket = new WebSocket(`${window.location.protocol.replace("http", "ws")}//${window.location.host}`);
             this.#socket.addEventListener("message", event => {
                 if (event.data.startsWith("hash:")) {
                     saveHash = event.data.slice(5);
