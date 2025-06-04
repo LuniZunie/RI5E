@@ -52,7 +52,7 @@ passport.deserializeUser((obj, done) => done(null, obj));
 
 (function OAuth() {
     const get = (o, v) => {
-        if (config.production) return o.production?.[v] ?? o[v];
+        if (secrets.production) return o.production?.[v] ?? o[v];
         else return o.development?.[v] ?? o[v];
     };
     const handle = (req, res) => {
@@ -105,7 +105,7 @@ passport.deserializeUser((obj, done) => done(null, obj));
 })();
 
 function get_file_path(user, folder = "users", suffix = ".json") {
-    let prefix = config.production ? "" : "dev.";
+    let prefix = secrets.production ? "" : "dev.";
     return `server/db/${folder}/${prefix}${user.auth_service.toLowerCase()}.${Number(user.id).toString(36)}${suffix}`;
 }
 async function recursive_write(file, data, encoding = "utf8", source) {
@@ -221,7 +221,7 @@ app.get("/api/sync", (req, res) => {
     res.status(200).json({
         time: Date.now(),
         server: {
-            production: config.production,
+            production: secrets.production,
             url: url_base
         }
     });
