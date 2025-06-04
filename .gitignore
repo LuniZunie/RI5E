@@ -6,6 +6,7 @@ dist
 server/db
 server/logs
 
-# DO NOT FUCKING DELETE THIS LINE
+# DO NOT FUCKING DELETE ANYTHING BELOW THIS LINE
 \!*
 \!*/
+**/*.hidden.*

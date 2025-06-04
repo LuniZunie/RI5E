@@ -358,7 +358,7 @@ class Orange extends Forageable {
 
     static sprite = "/game/assets/forageable/orange.svg";
 
-    static season = Time.Season.Spring & Time.Season.Summer;
+    static season = Time.Season.Spring | Time.Season.Summer;
     static time = new Variable("error:0", Time.week(2), Time.day(2));
 
     static drop = class extends Drop {
@@ -445,7 +445,7 @@ class Lime extends Forageable {
 
     static sprite = "/game/assets/forageable/lime.svg";
 
-    static season = Time.Season.Summer & Time.Season.Autumn;
+    static season = Time.Season.Summer | Time.Season.Autumn;
     static time = new Variable("error:0", Time.week(3), Time.week(1));
 
     static drop = class extends Drop {
@@ -503,7 +503,7 @@ class Pineapple extends Forageable {
 
     static sprite = "/game/assets/forageable/pineapple.svg";
 
-    static season = Time.Season.Spring & Time.Season.Summer;
+    static season = Time.Season.Spring | Time.Season.Summer;
     static time = new Variable("error:0", Time.month(1), Time.day(4));
 
     static drop = class extends Drop {

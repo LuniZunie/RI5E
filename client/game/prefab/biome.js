@@ -38,7 +38,7 @@ export default class Biome extends Prefab {
     static climate;
 
     static forageables = [];
-    static fishable = false;
+    static fishes = [];
 
     element;
     x; y;
@@ -271,7 +271,7 @@ class ShallowWater extends Biome {
     });
 
     static forageables = [];
-    static fishable = true;
+    static fishes = [];
 };
 linker.goto(Biome).link(ShallowWater);
 
@@ -289,7 +289,7 @@ class DeepWater extends Biome {
     });
 
     static forageables = [];
-    static fishable = true;
+    static fishes = [];
 };
 linker.goto(Biome).link(DeepWater);
 

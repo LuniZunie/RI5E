@@ -262,7 +262,7 @@ export const Pages = Object.freeze({
 
                         const fish = panel.qs("div.button.fish");
                         fish.classList.remove("hidden");
-                        fish.classList.toggle("disabled", !biome.constructor.fishable);
+                        fish.classList.toggle("disabled", biome.constructor.fish.length === 0);
                         fish.classList.toggle("enter-focus", panel.dataset.tabFocus === "fish");
                         fish.classList.add("tab-focus");
                     }

@@ -16,34 +16,18 @@ import cookieParser from "cookie-parser";
 import { apply_diff } from "../client/global/module/diff.js";
 import UUID from "../client/module/uuid.js";
 
-// logging
-class Logger {
-    static log(type, source, secondSource = "", message) {
-        secondSource ||= "";
-        const [ date, time ] = new Date().toISOString().split("T");
-        const path = `server/logs/${date}.log`;
+import Logger from "./module/logger.js";
 
-        const field = (len, msg) => (msg.slice(0, len) || "-").padEnd(len, " ");
-
-        const logMessage = `${date} ${time.slice(0, 8)} ${field(8, type)} ${field(16, source)} ${field(16, secondSource)} ${message}\n`;
-        // append log synchronously
-        try {
-            fs.appendFileSync(path, logMessage, "utf8");
-        } catch (err) {
-            console.error(`Failed to write log: ${err.message}`);
-        }
-    }
-}
-
-const server_config = JSON.parse(fs.readFileSync("server/!server.json", "utf8"));
-const url_base = server_config.production ? `https://${server_config.domain}` : `http://${server_config.host}:${server_config.port}`;
+const config = JSON.parse(fs.readFileSync("server/config.json", "utf8"));
+const secrets = JSON.parse(fs.readFileSync("server/secret.hidden.json", "utf8"));
+const url_base = secrets.production ? `https://${config.domain}` : `http://${config.host}:${config.port}`;
 
 const app = express();
 
-const server = server_config.production ?
+const server = secrets.production ?
     https.createServer({
-        cert: fs.readFileSync(`/etc/letsencrypt/live/${server_config.domain}/fullchain.pem`),
-        key: fs.readFileSync(`/etc/letsencrypt/live/${server_config.domain}/privkey.pem`),
+        cert: fs.readFileSync(`/etc/letsencrypt/live/${config.domain}/fullchain.pem`),
+        key: fs.readFileSync(`/etc/letsencrypt/live/${config.domain}/privkey.pem`),
     }, app) :
     http.createServer(app);
 
@@ -52,40 +36,36 @@ const wss = new WebSocketServer({ server });
 app.use(express.json({ limit: "10mb" })); // limit to 1mb
 app.use(express.urlencoded({ extended: true, limit: "10mb" })); // limit to 1mb
 app.use(express.static("client"));
-app.set("views", "client/view");
-
-// cookies
 app.use(cookieParser());
-
-// middleware
 app.use(session({
-    secret: server_config.session.secret,
+    secret: secrets.session.secret,
     resave: false,
     saveUninitialized: true
 }));
-
 app.use(passport.initialize());
 app.use(passport.session());
+
+app.set("views", "client/view");
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
 (function OAuth() {
     const get = (o, v) => {
-        if (server_config.production) return o.production?.[v] ?? o[v];
+        if (config.production) return o.production?.[v] ?? o[v];
         else return o.development?.[v] ?? o[v];
     };
     const handle = (req, res) => {
-        const token = jwt.sign(req.user, server_config.jwt.secret, { expiresIn: get(server_config.auth, "expiration") });
-        res.cookie("token", token, { httpOnly: true, sameSite: "Strict", secure: server_config.secure });
-        res.redirect(get(server_config.auth.in, "success"));
+        const token = jwt.sign(req.user, secrets.jwt.secret, { expiresIn: get(config.auth, "expiration") });
+        res.cookie("token", token, { httpOnly: true, sameSite: "Strict", secure: config.secure });
+        res.redirect(get(config.auth.in, "success"));
     };
 
     { // Google OAuth
-        const google = server_config.auth.in.google;
+        const google = config.auth.in.google;
         passport.use(new GoogleStrategy({
-            clientID: get(google, "id"),
-            clientSecret: get(google, "secret"),
+            clientID: get(secrets.google, "id"),
+            clientSecret: get(secrets.google, "secret"),
             callbackURL: `${url_base}${get(google, "callback")}`,
         }, (accessToken, refreshToken, profile, done) => {
             done(null, {
@@ -99,14 +79,14 @@ passport.deserializeUser((obj, done) => done(null, obj));
         }));
 
         app.get(get(google, "route"), passport.authenticate("google", { scope: get(google, "scope") }));
-        app.get(get(google, "callback"), passport.authenticate("google", { session: false, failureRedirect: get(server_config.auth.in, "failure") }), handle);
+        app.get(get(google, "callback"), passport.authenticate("google", { session: false, failureRedirect: get(config.auth.in, "failure") }), handle);
     }
 
     { // GitHub OAuth
-        const github = server_config.auth.in.github;
+        const github = config.auth.in.github;
         passport.use(new GitHubStrategy({
-            clientID: get(github, "id"),
-            clientSecret: get(github, "secret"),
+            clientID: get(secrets.github, "id"),
+            clientSecret: get(secrets.github, "secret"),
             callbackURL: `${url_base}${get(github, "callback")}`,
         }, (accessToken, refreshToken, profile, done) => {
             done(null, {
@@ -120,12 +100,12 @@ passport.deserializeUser((obj, done) => done(null, obj));
         }));
 
         app.get(get(github, "route"), passport.authenticate("github", { scope: get(github, "scope") }));
-        app.get(get(github, "callback"), passport.authenticate("github", { session: false, failureRedirect: get(server_config.auth.in, "failure") }), handle);
+        app.get(get(github, "callback"), passport.authenticate("github", { session: false, failureRedirect: get(config.auth.in, "failure") }), handle);
     }
 })();
 
 function get_file_path(user, folder = "users", suffix = ".json") {
-    let prefix = server_config.production ? "" : "dev.";
+    let prefix = config.production ? "" : "dev.";
     return `server/db/${folder}/${prefix}${user.auth_service.toLowerCase()}.${Number(user.id).toString(36)}${suffix}`;
 }
 async function recursive_write(file, data, encoding = "utf8", source) {
@@ -192,7 +172,7 @@ async function read_or(file, encoding, fallback, source) {
 
         let user;
         try {
-            user = jwt.verify(token, server_config.jwt.secret);
+            user = jwt.verify(token, secrets.jwt.secret);
         } catch (err) {
             ws.close(1008, "Invalid or expired token");
             return;
@@ -213,7 +193,7 @@ app.get("/api/user", (req, res) => {
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     try {
-        const user = jwt.verify(token, server_config.jwt.secret);
+        const user = jwt.verify(token, secrets.jwt.secret);
         res.status(200).json(user);
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 });
@@ -224,7 +204,7 @@ app.get("/api/save", (req, res) => { // temporary endpoint for testing
 
     let user;
     try {
-        user = jwt.verify(token, server_config.jwt.secret);
+        user = jwt.verify(token, secrets.jwt.secret);
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 
     const file = get_file_path(user, "saves", ".txt");
@@ -241,7 +221,7 @@ app.get("/api/sync", (req, res) => {
     res.status(200).json({
         time: Date.now(),
         server: {
-            production: server_config.production,
+            production: config.production,
             url: url_base
         }
     });
@@ -253,7 +233,7 @@ app.get("/api/user/data", async (req, res) => { // all asynchronous to allow for
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     try {
-        const user = jwt.verify(token, server_config.jwt.secret);
+        const user = jwt.verify(token, secrets.jwt.secret);
         const file = get_file_path(user);
 
         read_or(file, "utf8", "{}", "get_user_data")
@@ -267,7 +247,7 @@ app.post("/api/user/data", async (req, res) => {
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     try {
-        const user = jwt.verify(token, server_config.jwt.secret);
+        const user = jwt.verify(token, secrets.jwt.secret);
         const file = get_file_path(user);
 
         try {
@@ -363,7 +343,7 @@ app.delete("/api/user/data", async (req, res) => {
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     try {
-        const user = jwt.verify(token, server_config.jwt.secret);
+        const user = jwt.verify(token, secrets.jwt.secret);
         const file = get_file_path(user);
         const file2 = get_file_path(user, "saves", ".txt");
 
@@ -383,12 +363,12 @@ app.delete("/api/user/data", async (req, res) => {
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
 });
 
-app.get(server_config.auth.out.route, (req, res) => {
+app.get(config.auth.out.route, (req, res) => {
     res.clearCookie("token");
-    res.redirect(server_config.auth.out.success);
+    res.redirect(config.auth.out.success);
 });
 
-for (const page of server_config.router) {
+for (const page of config.router) {
     let fn;
     if ("file" in page)
         fn = res => res.render(page.file);
@@ -409,6 +389,6 @@ app.use((req, res) => {
     else res.status(404).send("404 Not Found");
 });
 
-app.listen(server_config.port, server_config.host, () => {
+app.listen(config.port, config.host, () => {
     console.log(`WebSocket server running at ${url_base.replace("http", "ws")}/`);
 });

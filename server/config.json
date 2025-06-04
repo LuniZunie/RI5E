@@ -1,0 +1,49 @@
+{
+    "secure": false,
+    "domain": "luni.me",
+    "host": "localhost",
+    "port": 3000,
+    "router": [
+        {
+            "route": [ "/" ],
+            "file": "page/home.ejs"
+        },
+        {
+            "route": [ "/login" ],
+            "file": "page/login.ejs"
+        },
+        {
+            "route": [ "/profile" ],
+            "file": "page/profile.ejs"
+        },
+        {
+            "route": [ "/404" ],
+            "redirect": "/"
+        }
+    ],
+    "auth": {
+        "expiration": "24h",
+        "in": {
+            "success": "/",
+            "failure": "login",
+            "google": {
+                "route": "/auth/google",
+                "callback": "/auth/google/callback",
+                "scope": [ "profile", "email" ]
+            },
+            "github": {
+                "route": "/auth/github",
+                "callback": "/auth/github/callback",
+                "scope": [ "user:email" ]
+            }
+        },
+        "out": {
+            "route": "/logout",
+            "success": "/"
+        },
+        "delete": {
+            "route": "/delete",
+            "success": "/"
+        }
+    }
+}
