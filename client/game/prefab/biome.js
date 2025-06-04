@@ -38,7 +38,7 @@ export default class Biome extends Prefab {
     static climate;
 
     static forageables = [];
-    static fishes = [];
+    static fish = [];
 
     element;
     x; y;
@@ -220,6 +220,7 @@ class MangroveForest extends Biome {
     });
 
     static forageables = [ Pineapple, Coconut ];
+    static fish = [];
 };
 linker.goto(Biome).link(MangroveForest);
 
@@ -254,6 +255,7 @@ class Mudflat extends Biome {
     });
 
     static forageables = [];
+    static fish = [];
 }
 linker.goto(Biome).link(Mudflat);
 
@@ -271,7 +273,7 @@ class ShallowWater extends Biome {
     });
 
     static forageables = [];
-    static fishes = [];
+    static fish = [];
 };
 linker.goto(Biome).link(ShallowWater);
 
@@ -289,7 +291,7 @@ class DeepWater extends Biome {
     });
 
     static forageables = [];
-    static fishes = [];
+    static fish = [];
 };
 linker.goto(Biome).link(DeepWater);
 
