@@ -16,7 +16,21 @@ import cookieParser from "cookie-parser";
 import { apply_diff } from "../client/global/module/diff.js";
 import UUID from "../client/module/uuid.js";
 
-import Logger from "./module/logger.js";
+export default class Logger {
+    static log(type, source, secondSource = "", message) {
+        secondSource ||= "";
+        const [ date, time ] = new Date().toISOString().split("T");
+        const path = `server/logs/${date}.log`;
+
+        const field = (len, msg) => (msg.slice(0, len) || "-").padEnd(len, " ");
+
+        const logMessage = `${date} ${time.slice(0, 8)} ${field(8, type)} ${field(16, source)} ${field(16, secondSource)} ${message}\n`;
+        // append log synchronously
+        try {
+            fs.appendFileSync(path, logMessage, "utf8");
+        } catch (err) { console.error(`Failed to write log: ${err.message}`); }
+    }
+}
 
 const config = JSON.parse(fs.readFileSync("server/config.json", "utf8"));
 const secrets = JSON.parse(fs.readFileSync("server/secret.hidden.json", "utf8"));
