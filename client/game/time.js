@@ -63,30 +63,9 @@ export default class Time {
     static get TPS() { return Time.#ticks_per_second; }
 
     static #time = { value: Date.now(), when: Date.now() };
-    static sync_time() {
-        fetch("/api/sync", { cache: "no-store" })
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 401)
-                        window.location.href = `login?redirect=${encodeURIComponent(window.location.href)}&error=${encodeURIComponent("unauthorized")}`;
-                    else if (response.status === 404)
-                        throw new Error("Server failed to respond. Please try again later.");
-                    else
-                        throw new Error(response.statusText);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.time) {
-                    Time.#time.value = data.time;
-                    Time.#time.when = Date.now();
-                }
-            })
-            .catch(error => {
-                console.error("Game: Failed to sync with server:", error);
-                Notification.top(Notification.ERROR, `Failed to sync with server: ${error.message}`);
-            })
-            .finally(() => setTimeout(Time.sync_time, 60 * 1000)); // resync every minute
+    static sync_time = (value, when) => {
+        Time.#time.value = value || Date.now();
+        Time.#time.when = when || Date.now();
     }
 
     static get now() {
@@ -113,4 +92,3 @@ export default class Time {
         return Math.floor(tick / Time.year(1)) + 1;
     }
 }
-Time.sync_time();

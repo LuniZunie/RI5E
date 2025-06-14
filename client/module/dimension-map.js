@@ -121,4 +121,12 @@ export default class DimensionMap {
             throw new Error("Invalid dimension index: " + n);
         return this.#offset[n] + this.#dim[n] - 1;
     };
+
+    *values() {
+        if (this.#constant)
+            throw new Error("Cannot iterate over constant data");
+
+        for (let i = 0; i < this.#data.length; i++)
+            yield this.#table ? this.#table[this.#data[i]] : this.#data[i];
+    };
 }

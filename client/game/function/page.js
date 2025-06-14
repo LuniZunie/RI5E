@@ -8,7 +8,6 @@ import Text from "../../module/text.js";
 import Notification from "./notification.js";
 
 import Time from "../time.js";
-import Wallet from "../prefab/wallet.js";
 import { WalletChangeEvent } from "../prefab/game-event.js";
 
 export default class Page {
@@ -61,16 +60,26 @@ export const Pages = Object.freeze({
 
         const map = game.map;
         function quote(biome) {
-            const purchased = display.qsa("div.biome:not(.locked)").length;
+            let purchased = 0;
+            for (const b of map.values())
+                if (!b.locked) purchased++;
             return (biome.distance * purchased) ** 2 * 0.5;
         }
 
+        function get_edges(x, y) {
+            return {
+                top: map.getor({ locked: true }, x, y - 1).locked,
+                bottom: map.getor({ locked: true }, x, y + 1).locked,
+                left: map.getor({ locked: true }, x - 1, y).locked,
+                right: map.getor({ locked: true }, x + 1, y).locked,
+            };
+        }
+
         function fogged(x, y) {
+            const edges = get_edges(x, y);
             return  map.getor({ locked: true }, x, y).locked &&
-                    map.getor({ locked: true }, x + 1, y).locked &&
-                    map.getor({ locked: true }, x - 1, y).locked &&
-                    map.getor({ locked: true }, x, y + 1).locked &&
-                    map.getor({ locked: true }, x, y - 1).locked
+                    edges.top && edges.bottom &&
+                    edges.left && edges.right;
         }
 
         const events = new Map();
@@ -90,7 +99,6 @@ export const Pages = Object.freeze({
                     capture: (game, event) => {
                         switch (event.id) {
                             case "prefab.game_event.wallet_change": {
-                                if (!biome.locked) return; // no need to update locked biomes
                                 const cost = format_number(quote(biome));
                                 div.classList.toggle("could-purchase", game.could_pay(cost));
                             } break;
@@ -108,6 +116,12 @@ export const Pages = Object.freeze({
                         WalletChangeEvent.connect(prefab);
                         cache.connectedEvents ||= new Set();
                         cache.connectedEvents.add(prefab);
+                    } else {
+                        const edges = get_edges(x, y);
+                        div.classList.toggle("edge-top", edges.top);
+                        div.classList.toggle("edge-bottom", edges.bottom);
+                        div.classList.toggle("edge-left", edges.left);
+                        div.classList.toggle("edge-right", edges.right);
                     }
 
                     div.style.background = biome.constructor.sprite;
@@ -121,40 +135,69 @@ export const Pages = Object.freeze({
                     const pos = div.dataset.position, [ x, y ] = pos.split(",").map(Number);
                     if (fogged(x, y) || panel.dataset.position === pos) {
                         panel.dataset.position = "";
-                        panel.dataset.tabFocus = panel.qsa("div.button.enter-focus")[0]?.dataset.tabFocus ?? "forage";
+                        panel.dataset.tabFocus = panel.qsa("div.button.enter-focus")[0]?.dataset.tabFocus || panel.dataset.tabFocus || "forage";
                         return panel.classList.add("hidden");
                     }
 
                     div.classList.add("selected");
                     panel.dataset.position = pos;
-                    panel.dataset.tabFocus = panel.qsa("div.button.enter-focus")[0]?.dataset.tabFocus ?? "forage";
+                    panel.dataset.tabFocus = panel.qsa("div.button.enter-focus")[0]?.dataset.tabFocus || panel.dataset.tabFocus || "forage";
                     display.dataset.position = pos;
 
                     const biome = map.get(x, y);
 
                     panel.qsa("*[data-tooltip]").forEach(el => el.onmouseout?.());
 
-                    panel.innerHTML = "";
+                    // panel.innerHTML = "";
 
-                    panel.create("div", {
-                        class: "title auto-scroll",
-                        content: biome.constructor.name.case(Text.case.title).get()
-                    }, { end: true });
-                    panel.create("div", {
-                        class: "description auto-scroll",
-                        content: biome.constructor.description.case(Text.case.sentence).get()
-                    }, { end: true });
+                    const title = panel.qs("div.title");
+                    if (title) {
+                        const scroll = title.qs("span.scroll-text");
+                        if (scroll)
+                            scroll.textContent = biome.constructor.name.case(Text.case.title).get();
+                        else
+                            title.textContent = biome.constructor.name.case(Text.case.title).get();
+                    } else
+                        panel.create("div", {
+                            class: "title auto-scroll",
+                            content: biome.constructor.name.case(Text.case.title).get()
+                        }, { end: true });
 
-                    panel.appendChild(define(Climate, biome.climate).display());
+                    const description = panel.qs("div.description");
+                    if (description) {
+                        const scroll = description.qs("span.scroll-text");
+                        if (scroll)
+                            scroll.textContent = biome.constructor.description.case(Text.case.sentence).get();
+                        else
+                            description.textContent = biome.constructor.description.case(Text.case.sentence).get();
+                    } else
+                        panel.create("div", {
+                            class: "description auto-scroll",
+                            content: biome.constructor.description.case(Text.case.sentence).get()
+                        }, { end: true });
+
+                    if (panel.qs("div.climate"))
+                        panel.qs("div.climate").outerHTML = define(Climate, biome.climate).display().outerHTML;
+                    else
+                        panel.appendChild(define(Climate, biome.climate).display());
 
                     { // forageables
-                        const forageables = panel.create("div", { class: "forageables" }, { end: true });
-                        forageables.create("span", { class: "title", content: "Forageables" }, { end: true });
+                        const forageables = panel.qs("div.forageables") || panel.create("div", { class: "forageables" }, { end: true });
+                        forageables.qs("span.title") || forageables.create("span", { class: "title", content: "Forageables" }, { end: true });
 
-                        const list = forageables.create("div", { class: "list" }, { end: true });
+                        const list = forageables.qs("div.list") || forageables.create("div", { class: "list" }, { end: true });
+
+                        const remove = {};
+                        list.qsa("div.forageable").forEach(el => remove[el.dataset.id] = el);
                         for (const forageable of biome.constructor.forageables) {
+                            if (list.qs(`div.forageable[data-id="${forageable.id}"]`)) {
+                                delete remove[forageable.id];
+                                continue; // already exists
+                            }
+
                             const div = list.create("div", {
-                                class: "forageable",
+                                class: `forageable`,
+                                "data-id": forageable.id,
                                 "data-tooltip": `${forageable.name.case(Text.case.title).get(2)} (${forageable.description.case(Text.case.sentence).get()})`,
                             }, { end: true });
                             div.create("img", {
@@ -163,14 +206,53 @@ export const Pages = Object.freeze({
                                 draggable: false,
                             }, { end: true });
                         }
+
+                        for (const el of Object.values(remove)) {
+                            el.onmouseout?.();
+                            el.remove();
+                        }
                     }
 
-                    panel.create("div", { class: "button purchase disabled", content: "Loading..." }, { end: true });
-                    panel.create("div", { class: "button forage hidden", content: "Forage", "data-tab-focus": "forage" }, { end: true });
-                    panel.create("div", { class: "button fish hidden", content: "Fish", "data-tab-focus": "fish" }, { end: true });
+                    { // fishes
+                        const fishes = panel.qs("div.fishes") || panel.create("div", { class: "fishes" }, { end: true });
+                        fishes.qs("span.title") || fishes.create("span", { class: "title", content: "Fishes" }, { end: true });
 
-                    const purchase = panel.qs("div.button.purchase");
+                        const list = fishes.qs("div.list") || fishes.create("div", { class: "list" }, { end: true });
+
+                        const remove = {};
+                        list.qsa("div.fish").forEach(el => remove[el.dataset.id] = el);
+                        for (const fish of biome.constructor.fishes.list ?? []) {
+                            if (list.qs(`div.fish[data-id="${fish.id}"]`)) {
+                                delete remove[fish.id];
+                                continue; // already exists
+                            }
+
+                            const div = list.create("div", {
+                                class: "fish",
+                                "data-id": fish.id,
+                                "data-tooltip": `${fish.name.case(Text.case.title).get(2)} (${fish.description.case(Text.case.sentence).get()})`,
+                            }, { end: true });
+                            div.create("img", {
+                                src: fish.sprite,
+                                alt: fish.name.case(Text.case.title).get(2),
+                                draggable: false,
+                            }, { end: true });
+                        }
+
+                        for (const el of Object.values(remove)) {
+                            el.onmouseout?.();
+                            el.remove();
+                        }
+                    }
+
+                    const purchase = panel.qs("div.button.purchase") || panel.create("div", { class: "button purchase", content: "Loading..." }, { end: true });
+                    const forage = panel.qs("div.button.forage") || panel.create("div", { class: "button forage hidden", content: "Forage", "data-tab-focus": "forage" }, { end: true });
+                    const fish = panel.qs("div.button.fish") || panel.create("div", { class: "button fish hidden", content: "Fish", "data-tab-focus": "fish" }, { end: true });
+
+                    purchase.classList.remove("hidden");
                     purchase.classList.toggle("disabled", !biome.locked);
+                    forage.classList.add("hidden");
+                    fish.classList.add("hidden");
 
                     if (biome.locked) {
                         const cost = format_number(quote(biome));
@@ -178,23 +260,36 @@ export const Pages = Object.freeze({
 
                         purchase.onclick = () => {
                             if (biome.locked && !fogged(x, y)) {
-                                if (game.pay(cost)) {
+                                if (game.pay(cost, () => game.user.inventory.change(biome, b => { b.locked = false; }))) {
                                     try {
                                         WalletChangeEvent.disconnect(prefab);
                                         cache.connectedEvents?.delete(prefab);
                                         div.classList.remove("could-purchase");
                                     } catch { }
 
-                                    game.user.inventory.change(biome, b => { b.locked = false; });
                                     div.classList.remove("locked");
 
                                     purchase.onclick = null;
                                     div.click();
                                     div.click();
 
+                                    const edges = get_edges(x, y), removeEdges = {};
+
+                                    if (edges.top) div.classList.add("edge-top");
+                                    else removeEdges[`${x},${y - 1}`] = "edge-bottom";
+
+                                    if (edges.bottom) div.classList.add("edge-bottom");
+                                    else removeEdges[`${x},${y + 1}`] = "edge-top";
+
+                                    if (edges.left) div.classList.add("edge-left");
+                                    else removeEdges[`${x - 1},${y}`] = "edge-right";
+
+                                    if (edges.right) div.classList.add("edge-right");
+                                    else removeEdges[`${x + 1},${y}`] = "edge-left";
+
                                     [ [ x + 1, y ], [ x - 1, y ], [ x, y + 1 ], [ x, y - 1 ] ].forEach(([ nx, ny ]) => {
-                                        const neighbor = display.qs(`div.biome.fogged[data-position="${nx},${ny}"]`);
-                                        if (neighbor) {
+                                        const neighbor = display.qs(`div.biome[data-position="${nx},${ny}"]`);
+                                        if (neighbor.classList.contains("fogged")) {
                                             neighbor.classList.remove("fogged");
                                             neighbor.style.background = map.get(nx, ny).constructor.sprite;
 
@@ -206,6 +301,9 @@ export const Pages = Object.freeze({
                                             }
 
                                             neighbor.classList.toggle("could-purchase", game.could_pay(format_number(quote(map.get(nx, ny)))));
+                                        } else {
+                                            const removeEdge = removeEdges[`${nx},${ny}`];
+                                            if (removeEdge) neighbor.classList.remove(removeEdge);
                                         }
                                     });
                                 }
@@ -217,7 +315,6 @@ export const Pages = Object.freeze({
                         purchase.classList.add("hidden");
                         purchase.classList.remove("disabled", "enter-focus");
 
-                        const forage = panel.qs("div.button.forage");
                         forage.classList.remove("hidden");
                         forage.classList.toggle("disabled", biome.constructor.forageables.length === 0);
                         forage.classList.toggle("enter-focus", panel.dataset.tabFocus === "forage");
@@ -242,7 +339,7 @@ export const Pages = Object.freeze({
 
                                                 Notification.side(Notification.NORMAL, `Foraged ${q} ${itemName} for <div class="coins">${format_number(price)}</div>`);
                                             } else {
-                                                game.user.inventory.add(define(item, {quantity: q }));
+                                                game.user.inventory.add(define(item, { quantity: q }));
                                                 Notification.side(Notification.NORMAL, `Foraged ${q} ${itemName}`);
                                             }
 
@@ -260,11 +357,43 @@ export const Pages = Object.freeze({
                             }
                         };
 
-                        const fish = panel.qs("div.button.fish");
                         fish.classList.remove("hidden");
-                        fish.classList.toggle("disabled", biome.constructor.fish.length === 0);
+                        fish.classList.toggle("disabled", Object.keys(biome.constructor.fishes).length === 0);
                         fish.classList.toggle("enter-focus", panel.dataset.tabFocus === "fish");
                         fish.classList.add("tab-focus");
+                        fish.onclick = () => {
+                            if (!biome.locked) {
+                                const fishes = biome.constructor.fishes[Time.Month[Time.getMonth()]];
+                                if (!fishes || fishes.size === 0) return;
+
+                                const count = fishes.size;
+                                const fish = (rng => {
+                                    for (const [ fish, weight ] of fishes.entries()) {
+                                        if (rng < weight) return fish;
+                                        rng -= weight;
+                                    }
+                                    return null; // caught trash
+                                })(Math.random() * count);
+
+                                if (fish) {
+                                    const drop = fish.drop;
+                                    const q = drop.yield.positive;
+
+                                    const item = drop.item;
+                                    const itemName = item.name.case(Text.case.title).get(q);
+                                    if (item.sellable) {
+                                        const price = item.sell_price.positive * q;
+                                        game.sell(price);
+
+                                        Notification.side(Notification.NORMAL, `Caught ${q} ${itemName} for <div class="coins">${format_number(price)}</div>`);
+                                    } else {
+                                        game.user.inventory.add(define(item, { quantity: q }));
+                                        Notification.side(Notification.NORMAL, `Caught ${q} ${itemName}`);
+                                    }
+                                } else
+                                    Notification.side(Notification.WARN, "Did not catch any fish.");
+                            }
+                        }
                     }
 
                     panel.classList.remove("hidden");

@@ -24,6 +24,8 @@ export default function confirm(message, options = {}) {
             font-size: 1.5em;
             text-align: center;
             box-shadow: 0 0 10px rgba(2, 3, 14, 0.5);
+            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px);
         `;
 
         document.body.appendChild(dialog);

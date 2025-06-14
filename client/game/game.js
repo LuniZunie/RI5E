@@ -94,6 +94,8 @@ export default class Game {
         year: Game.year,
     };
 
+    #toTrigger = new Set();
+
     constructor(O) {
         this.#instance = UUID();
         if (O.user instanceof User)
@@ -117,35 +119,26 @@ export default class Game {
         let resolve;
         const promise = new Promise(res => resolve = res);
 
-        let saveHash = "";
-        try {
-            this.#socket = new WebSocket(`${window.location.protocol.replace("http", "ws")}//${window.location.host}`);
-            this.#socket.addEventListener("message", event => {
-                if (event.data.startsWith("hash:")) {
-                    saveHash = event.data.slice(5);
+        this.#socket = new WebSocket(`${window.location.protocol.replace("http", "ws")}//${window.location.host}`);
+        this.#socket.addEventListener("message", event => {
+            const [ cmd, msg ] = event.data.split(/:(.*)/s);
+            switch (cmd) {
+                case "hash": {
+                    this.#saveHash = msg;
                     resolve();
-                }
-            });
-        } catch (error) {
-            fetch("api/save", {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                cache: "no-store"
-            })
-                .then(({ hash }) => {
-                    if (hash) {
-                        saveHash = hash;
-                        resolve();
-                    } else
-                        throw new Error("No save hash found.");
-                })
-                .catch(resolve);
+                } break;
+                case "sync": {
+                    Time.sync_time(parseInt(msg, 10), Date.now());
+                } break;
+            }
+        });
 
-        }
+        this.#socket.addEventListener("open", () => {
+            this.#socket.send("hash");
+            this.#socket.send("sync");
+        });
 
         await promise;
-        this.#saveHash = saveHash || "";
 
         const top_bar = this.#view.querySelector("div.top-bar");
         top_bar.querySelector("div.user-info>span.username").textContent = this.#user.username;
@@ -226,7 +219,7 @@ export default class Game {
             });
         })(hash || this.#saveHash)
             .then(data => {
-                if (data) {
+                if (data && Object.keys(data).length > 0) {
                     this.#user.inventory.import(data);
                     resolve(true);
                 } else
@@ -343,13 +336,13 @@ export default class Game {
             .catch(error => {
                 console.error("Game: Failed to export user data:", error);
                 Notification.top(Notification.ERROR, `Failed to export user data: ${error.message}`);
-                this.#user.inventory.reinstate(); // revert inventory changes on export failure
+                window.location.reload();
             })
             .finally(() => { this.#pause.export = false; });
         return true;
     }
 
-    pay(cost) {
+    pay(cost, beforeEvent = () => { }) {
         try {
             cost = parse_formatted_number(cost);
         } catch (e) {
@@ -371,8 +364,9 @@ export default class Game {
             Notification.top(Notification.WARN, "Not enough funds for this purchase.");
             return false;
         } else {
-            this.#user.inventory.change(wallet, w => { w.balance = balance - cost; });
-            WalletChangeEvent.trigger(this);
+            this.#user.inventory.change(wallet, w => { w.balance = Math.floor((balance - cost) * 1e+3) / 1e+3; });
+            if (typeof beforeEvent === "function") beforeEvent(this, wallet);
+            this.#toTrigger.add(WalletChangeEvent);
             return true;
         }
     }
@@ -391,6 +385,12 @@ export default class Game {
         const balance = parse_formatted_number(format_number(wallet.balance));
         return balance >= cost;
     }
+    balance() {
+        const id = this.#user.inventory.findByType(Wallet).values().next().value;
+        const wallet = this.#user.inventory.findById(id) || null;
+        if (!wallet) return 0;
+        return parse_formatted_number(format_number(wallet.balance));
+    }
 
     sell(price) {
         const id = this.#user.inventory.findByType(Wallet).values().next().value;
@@ -402,8 +402,8 @@ export default class Game {
             wallet.capture(this, WalletChangeEvent);
         }
 
-        this.#user.inventory.change(wallet, w => { w.balance += price; });
-        WalletChangeEvent.trigger(this);
+        this.#user.inventory.change(wallet, w => { w.balance = Math.floor((w.balance + price) * 1e+3) / 1e+3; });
+        this.#toTrigger.add(WalletChangeEvent);
     }
 
     async #smooth_scroll(el, dist, time, callback = () => true) {
@@ -437,11 +437,15 @@ export default class Game {
 
     update() {
         TickEvent.trigger(this);
+        for (const event of this.#toTrigger)
+            event?.trigger?.(this);
+        this.#toTrigger.clear();
 
         const { day, week, month, season, semester, year } = Game;
         if (this.#cache.day !== day) {
             DayChangeEvent.trigger(this);
-            this.export(); // export user data on day change
+            this.export();
+            this.#socket?.send("sync");
         }
         if (this.#cache.week !== week) WeekChangeEvent.trigger(this);
         if (this.#cache.month !== month) MonthChangeEvent.trigger(this);
@@ -483,6 +487,9 @@ export default class Game {
                 for (let i = 0; i < -n; i++)
                     if (scrollTexts[i]) scrollTexts[i].remove();
             }
+
+            const targetPos = Date.now() / 1000 * Game.TPS * speed % textWidth;
+            el.scrollLeft = targetPos; // set initial scroll position
 
             const scroll = (el, dist, time) => {
                 this.#smooth_scroll(el, dist, time, (el, pos) => {

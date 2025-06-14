@@ -25,24 +25,30 @@ body>div#game>div.page[data-page="explore"] {
             cursor: pointer;
 
             width: calc(100% - 2px);
-                height: calc(100% - 2px);
+            height: calc(100% - 2px);
 
             border: 1px solid #0002;
 
             &.locked {
-                border: 1px solid #000;
-                filter: grayscale(0.75) blur(2px);
+                filter: grayscale(0.25) opacity(0.5);
 
                 width: calc(100% - 2px);
                 height: calc(100% - 2px);
 
+                scale: 0.5;
+                border-radius: 50%;
+
+                transition: scale 0.2s ease, filter 0.2s ease;
+
                 &.could-purchase {
-                    filter: grayscale(0.5);
+                    filter: grayscale(0);
+                    scale: 0.7;
+                    box-shadow: 0 0 5px 2px #000;
                 }
             }
             &.selected {
                 z-index: 2;
-                scale: 1.35;
+                transform: scale(1.35);
                 border: 1px solid #80f;
                 opacity: 1;
                 box-shadow: 0 0 10px 2px #80f8;
@@ -51,6 +57,11 @@ body>div#game>div.page[data-page="explore"] {
                 cursor: default;
                 opacity: 0;
             }
+
+            &.edge-top { border-top: 1px solid #000; }
+            &.edge-bottom { border-bottom: 1px solid #000; }
+            &.edge-left { border-left: 1px solid #000; }
+            &.edge-right { border-right: 1px solid #000; }
         }
     }
     &:has(>div.panel:not(.hidden))>div.map {
@@ -115,7 +126,7 @@ body>div#game>div.page[data-page="explore"] {
             }
         }
 
-        &>div.forageables {
+        &>div.forageables, div.fishes {
             margin-top: 1vmin;
             width: calc(100% - 2vmin);
             padding: 1vmin;
@@ -127,6 +138,10 @@ body>div#game>div.page[data-page="explore"] {
                 text-align: center;
             }
 
+            &:not(:has(>div.list>div.forageable, div.fish)) {
+                display: none;
+            }
+
             &>div.list {
                 display: flex;
                 flex-direction: row;
@@ -135,7 +150,7 @@ body>div#game>div.page[data-page="explore"] {
                 gap: 1vmin;
                 flex-wrap: wrap;
 
-                &>div.forageable {
+                &>div.forageable, div.fish {
                     width: 2.5em;
                     height: 2.5em;
                     padding: 0.5vmin;
@@ -146,7 +161,7 @@ body>div#game>div.page[data-page="explore"] {
                     &>img {
                         width: 100%;
                         height: 100%;
-                        object-fit: cover;
+                        object-fit: contain;
                         scale: 0.9;
                     }
                 }

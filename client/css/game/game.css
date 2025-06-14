@@ -13,9 +13,6 @@ body>div#game {
     overflow: hidden;
     background: #112;
 
-    font: normal 16px/1.5 "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    color: #eee;
-
     &>div.page {
         position: fixed;
         top: var(--top-height);

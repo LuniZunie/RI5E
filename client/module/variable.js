@@ -10,12 +10,12 @@ export default class Variable {
             } break;
             case "range": {
                 const [ mn, mx ] = args;
-                this.#fn = () => Math.random() * (mx - mn + 1) + mn;
+                this.#fn = () => Math.random() * (mx - mn + (10 ** -this.#round)) + mn;
             } break;
             case "error": {
                 const [ v, dif ] = args;
                 const [ mn,mx ] = [ v-dif, v+dif ];
-                this.#fn = () => Math.random() * (mx - mn + 1) + mn + v;
+                this.#fn = () => Math.random() * (mx - mn + (10 ** -this.#round)) + mn;
             } break;
             case "variance": {
                 const [ mean, variance ] = args;

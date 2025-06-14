@@ -15,12 +15,6 @@ export default class Inventory {
 
     #original = new Map();
 
-    #reinstate = {
-        inventory: {},
-        map: new Map(),
-        lookup: new Map()
-    };
-
     #BUILD = ID_TABLE.build();
 
     constructor() {
@@ -121,10 +115,6 @@ export default class Inventory {
     }
 
     export() {
-        this.#reinstate.inventory = structuredClone(this.#inventory);
-        this.#reinstate.map = new Map(this.#map);
-        this.#reinstate.lookup = new Map(this.#lookup);
-
         const out = {
             added: [],
             changed: [],
@@ -186,20 +176,6 @@ export default class Inventory {
             this.#removed.clear();
             return false;
         }
-    }
-
-    reinstate() {
-        this.#inventory = structuredClone(this.#reinstate.inventory);
-        this.#map = new Map(this.#reinstate.map);
-        this.#lookup = new Map(this.#reinstate.lookup);
-        this.#added.clear();
-        this.#changed.clear();
-        this.#removed.clear();
-        this.#original.clear();
-
-        this.#reinstate.inventory = {};
-        this.#reinstate.map.clear();
-        this.#reinstate.lookup.clear();
     }
 
     async indexeddb(hash) {

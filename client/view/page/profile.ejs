@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/css/profile/main.css" />
+    <link rel="stylesheet" href="/css/global/toggle.css" />
     <title>RI5E | Profile</title>
+    <script type="module" src="/js/dom.js"></script>
+    <script type="module" src="/js/profile/main.js"></script>
     <script type="module">
         import User from "/game/user.js";
 
@@ -49,11 +52,33 @@
         <span class="email">johndoe@example.com</span>|
         <span class="auth-service">Service</span>
     </span>
+    <div class="settings">
+        <div class="setting" data-setting="dark_mode">
+            <div class="toggle-container">
+                <span class="label">Dark Mode</span>
+                <div class="toggle">
+                    <span class="indicator on">&#x23FD;</span>
+                    <span class="indicator off">&#x2B58;</span>
+                    <div class="switch on"></div>
+                </div>
+            </div>
+        </div>
+        <div class="setting" data-setting="dyslexic_mode">
+            <div class="toggle-container">
+                <span class="label">Dyslexic Mode</span>
+                <div class="toggle">
+                    <span class="indicator on">&#x23FD;</span>
+                    <span class="indicator off">&#x2B58;</span>
+                    <div class="switch"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="danger-zone">
         <span class="title">Danger Zone</span>
         <span class="description">These actions are irreversible. Please proceed with caution.</span>
-        <div class="button delete-account">Delete Account</div>
         <div class="button logout">Logout</div>
+        <div class="button delete-account">Delete Account</div>
     </div>
 </body>
 </html>

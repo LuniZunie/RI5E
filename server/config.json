@@ -19,6 +19,10 @@
         {
             "route": [ "/404" ],
             "redirect": "/"
+        },
+        {
+            "route": [ "/dev" ],
+            "file": "page/!dev.ejs"
         }
     ],
     "auth": {

@@ -36,7 +36,7 @@ class Logger {
 
 const config = JSON.parse(fs.readFileSync("server/config.json", "utf8"));
 const secrets = JSON.parse(fs.readFileSync("server/secret.hidden.json", "utf8"));
-const url_base = secrets.production ? `https://${config.domain}` : `http://${config.host}:${config.port}`;
+const url_base = secrets.production ? `https://${config.domain}` : `http://localhost:${config.port}`;
 
 const app = express();
 
@@ -187,14 +187,29 @@ async function read_or(file, encoding, fallback, source) {
             ws.close(1008, "Invalid or expired token");
             return;
         }
+        ws.on("message", message => {
+            const msg = message.toString();
+            if (typeof msg !== "string")
+                return;
 
-        const file = get_file_path(user, "saves", ".txt");
-        read_or(file, "utf8", "", "ws_send_save")
-            .then(({ status, data }) => ws.send(`hash:${data}`))
-            .catch(({ status, error }) => {
-                Logger.log("ERROR", "ws_send_save", user.id, `Failed to read save file ${file}: ${error}`);
-                ws.close(1008, "Internal server error");
-            });
+            switch (msg) {
+                case "ping": {
+                    ws.send("pong");
+                } break;
+                case "hash": {
+                    const file = get_file_path(user, "saves", ".txt");
+                    read_or(file, "utf8", "", "ws_send_save")
+                        .then(({ status, data }) => ws.send(`hash:${data}`))
+                        .catch(({ status, error }) => {
+                            Logger.log("ERROR", "ws_send_save", user.id, `Failed to read save file ${file}: ${error}`);
+                            ws.send("error:internal_server_error");
+                        });
+                } break;
+                case "sync": {
+                    ws.send(`sync:${Date.now()}`);
+                } break;
+            }
+        });
     });
 })();
 
@@ -206,35 +221,6 @@ app.get("/api/user", (req, res) => {
         const user = jwt.verify(token, secrets.jwt.secret);
         res.status(200).json(user);
     } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
-});
-app.get("/api/save", (req, res) => { // temporary endpoint for testing
-    res.set("Cache-Control", "no-store");
-    const token = req.cookies.token;
-    if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-    let user;
-    try {
-        user = jwt.verify(token, secrets.jwt.secret);
-    } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
-
-    const file = get_file_path(user, "saves", ".txt");
-    read_or(file, "utf8", "", "get_user_save")
-        .then(({ status, data }) => res.status(status).send({ hash: data }))
-        .catch(({ status, error }) => {
-            Logger.log("ERROR", "get_user_save", user.id, `Failed to read save file ${file}: ${error}`);
-            res.status(status).json({ error });
-        });
-});
-
-app.get("/api/sync", (req, res) => {
-    res.set("Cache-Control", "no-store");
-    res.status(200).json({
-        time: Date.now(),
-        server: {
-            production: secrets.production,
-            url: url_base
-        }
-    });
 });
 
 app.get("/api/user/data", async (req, res) => { // all asynchronous to allow for future expansion
@@ -256,97 +242,106 @@ app.post("/api/user/data", async (req, res) => {
     const token = req.cookies.token;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
+    let user;
     try {
-        const user = jwt.verify(token, secrets.jwt.secret);
-        const file = get_file_path(user);
+        user = jwt.verify(token, secrets.jwt.secret);
+    } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); return; }
 
-        try {
-            await fs.promises.access(file, fs.constants.W_OK);
-        } catch (err) {
-            if (err.code !== "ENOENT") {
-                Logger.log("ERROR", "post_user_data", null, `Failed to access file ${file}: ${err.message}`);
-                return res.status(500).json({ error: "Internal server error" });
-            }
-        } finally {
-            try {
-                // is_valid_user_data(req.body);
-            } catch (e) {
-                Logger.log("WARN", "post_user_data", null, `Invalid user data: ${e.message}`);
-                return res.status(400).json({ error: "Request failed" });
-            }
-
-            let hash = UUID();
-            read_or(file, "utf8", "{}", "post_user_data")
-                .then(({ status, data }) => {
-                    let userData;
-                    try {
-                        userData = JSON.parse(data);
-                    } catch (e) {
-                        Logger.log("ERROR", "post_user_data", null, `Failed to parse existing user data: ${e.message}`);
-                        return res.status(500).json({ error: "Internal server error" });
-                    }
-
-                    const inventory = userData.inventory || {};
-                    let { added, changed, removed } = req.body;
-
-                    if (added) {
-                        if (!Array.isArray(added)) {
-                            Logger.log("WARN", "post_user_data", null, "Invalid added data, expected array");
-                            return res.status(400).json({ error: "Invalid request data" });
-                        }
-                        added.forEach(({ id, construct, data }) => {
-                            if (typeof data !== "object") {
-                                Logger.log("WARN", "post_user_data", null, `Invalid item in added: ${JSON.stringify(data)}`);
-                                return res.status(400).json({ error: "Invalid request data" });
-                            }
-                            inventory[id] = { construct, data };
-                        });
-                    }
-                    if (changed) {
-                        if (!Array.isArray(changed)) {
-                            Logger.log("WARN", "post_user_data", null, "Invalid changed data, expected array");
-                            return res.status(400).json({ error: "Invalid request data" });
-                        }
-                        changed.forEach(({ id, data }) => {
-                            if (data === undefined || data === null)
-                                return; // skip if no data to change
-                            if (typeof data !== "object") {
-                                Logger.log("WARN", "post_user_data", null, `Invalid item in changed: ${JSON.stringify(data)}`);
-                                return res.status(400).json({ error: "Invalid request data" });
-                            }
-                            if (!inventory[id]) {
-                                Logger.log("WARN", "post_user_data", null, `Item to change not found in inventory: ${id}`);
-                                return res.status(400).json({ error: "Invalid request data" });
-                            }
-                            inventory[id].data = apply_diff(inventory[id].data, data);
-                        });
-                    }
-                    if (removed) {
-                        if (!Array.isArray(removed)) {
-                            Logger.log("WARN", "post_user_data", null, "Invalid removed data, expected array");
-                            return res.status(400).json({ error: "Invalid request data" });
-                        }
-                        removed.forEach(id => {
-                            if (typeof id !== "string") {
-                                Logger.log("WARN", "post_user_data", null, `Invalid item in removed: ${id}`);
-                                return res.status(400).json({ error: "Invalid request data" });
-                            }
-                            delete inventory[id];
-                        });
-                    }
-
-                    recursive_write(get_file_path(user, "saves", ".txt"), hash, "utf8", "write_user_save");
-
-                    return recursive_write(file, JSON.stringify({ inventory: inventory }, null, 2), "utf8", "post_user_data");
-                })
-                .then(() => res.status(200).json({ message: "User data saved successfully", hash }))
-                .catch(err => {
-                    Logger.log("ERROR", "post_user_data", null, `Failed to write file ${file}: ${err.message}`);
-                    res.status(500).json({ error: "Internal server error" });
-                });
+    const file = get_file_path(user);
+    try {
+        await fs.promises.access(file, fs.constants.W_OK);
+    } catch (err) {
+        if (err.code !== "ENOENT") {
+            Logger.log("ERROR", "post_user_data", user.id, `Failed to access file ${file}: ${err.message}`);
+            return res.status(500).json({ error: "Internal server error" });
         }
-    } catch (err) { res.status(401).json({ error: "Invalid or expired token" }); }
+    }
+
+    const error = { status: 400, error: "Invalid request data" };
+    let hash = UUID();
+    read_or(file, "utf8", "{}", "post_user_data")
+        .then(({ status, data }) => {
+            let userData;
+            try {
+                userData = JSON.parse(data);
+            } catch (e) {
+                error.status = 500, error.error = "Internal server error";
+                Logger.log("ERROR", "post_user_data", user.id, `Failed to parse existing user data: ${e.message}`);
+                throw new Error("Internal server error");
+            }
+
+            const inventory = userData.inventory || {};
+            let { added, changed, removed } = req.body;
+
+            if (added) {
+                if (!Array.isArray(added)) {
+                    error.status = 400, error.error = "Invalid added data, expected array";
+                    throw new Error("Invalid added data");
+                }
+                added.forEach(({ id, construct, data }) => {
+                    if (typeof data !== "object")
+                        return;
+                    inventory[id] = { construct, data };
+                });
+            }
+            if (changed) {
+                if (!Array.isArray(changed)) {
+                    error.status = 400, error.error = "Invalid changed data, expected array";
+                    throw new Error("Invalid changed data");
+                }
+                changed.forEach(({ id, data }) => {
+                    if (data === undefined || data === null || typeof data !== "object" || !inventory[id])
+                        return;
+                    inventory[id].data = apply_diff(inventory[id].data, data);
+                });
+            }
+            if (removed) {
+                if (!Array.isArray(removed)) {
+                    error.status = 400, error.error = "Invalid removed data, expected array";
+                    throw new Error("Invalid removed data");
+                }
+                removed.forEach(id => {
+                    if (typeof id !== "string")
+                        return;
+                    delete inventory[id];
+                });
+            }
+
+            recursive_write(get_file_path(user, "saves", ".txt"), hash, "utf8", "write_user_save");
+
+            const dir = path.dirname(file);
+            return fs.promises.mkdir(dir, { recursive: true })
+                .then(() => {
+                    const stream = fs.createWriteStream(file, { flags: "w", encoding: "utf8" });
+
+                    stream.write('{ "inventory":{');
+                    const ks = Object.keys(inventory);
+                    ks.forEach((k, i) => {
+                        stream.write(`"${k}":${JSON.stringify(inventory[k])}`);
+                        if (i < ks.length - 1) stream.write(",");
+                    });
+                    stream.end(" } }", "utf8");
+
+                    return new Promise((resolve, reject) => {
+                        stream.on("finish", resolve);
+                        stream.on("error", err => {
+                            error.status = 500, error.error = "Internal server error";
+                            Logger.log("ERROR", "post_user_data", user.id, `Failed to write file ${file}: ${err.message}`);
+                            reject(new Error("Internal server error"));
+                        });
+                    });
+                })
+                .catch(err => {
+                    error.status = 500, error.error = "Internal server error";
+                    Logger.log("ERROR", "post_user_data", user.id, `Failed to write file ${file}: ${err.message}`);
+                    throw new Error("Internal server error");
+                });
+        })
+            .then(() => res.status(200).json({ message: "User data saved successfully", hash }))
+            .catch(err => res.status(error.status).json({ error: error.error }));
+
 });
+
 app.delete("/api/user/data", async (req, res) => {
     res.set("Cache-Control", "no-store");
     const token = req.cookies.token;
@@ -400,5 +395,6 @@ app.use((req, res) => {
 });
 
 server.listen(config.port, config.host, () => {
+    console.log(`Server running at ${url_base}/`);
     console.log(`WebSocket server running at ${url_base.replace("http", "ws")}/`);
 });

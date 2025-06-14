@@ -1,0 +1,61 @@
+div.toggle-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+
+    &>span.label {
+        margin-right: 1em;
+        font-size: 1.2em;
+    }
+
+    &>div.toggle {
+        cursor: pointer;
+        position: relative;
+        display: block;
+        width: 3em;
+        height: 1.5em;
+        border-radius: 1.5em;
+        background: #ccc2;
+
+        transition: background 0.3s ease;
+
+        &>span.indicator {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            color: #fff;
+            font-size: 1em;
+
+            &.on { left: 0px; }
+            &.off { left: 50%; }
+        }
+
+        &>div.switch {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            position: absolute;
+            left: 0px;
+            width: 50%;
+            height: 100%;
+            scale: 0.75;
+
+            border-radius: 1.5em;
+
+            transition: left 0.15s ease-in-out;
+
+            background-color: #fff;
+            &.on { left: 50%; }
+        }
+
+        &:has(>div.switch.on) { background: #4caf50; }
+    }
+}
